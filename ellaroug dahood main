@@ -15,7 +15,7 @@ local mouse = lp:GetMouse()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "ella main da hood",
-    Text = "Bullet Lock & Prediction Enabled <3",
+    Text = "All Bullets Locked Directly to Body <3",
     Duration = 5
 })
 
@@ -37,10 +37,6 @@ local cfg = {
     silentAimFOVFilled = false,
     silentAimFOVOpacity = 0.2,
     silentAimFOVColor = Color3.fromRGB(255, 105, 180),
-    
-    -- PREDICTION SETTINGS
-    predictionEnabled = true,
-    predictionAmount = 0.138, -- Adjustable prediction multiplier
     
     hitboxEnabled = false,
     hitboxSize = 4,
@@ -148,7 +144,7 @@ local function getClosest()
     return best
 end
 
--- ACCURATE BULLET LOCK WITH PREDICTION CALCULATIONS
+-- FIXED BULLET LOCK: Forces 100% precision hits directly to the selected part
 handler.getAim = function(origin, maxDist)
     if not cfg.silentAim then return oldFunc(origin, maxDist) end
     if cfg.bypassRevolver then
@@ -158,17 +154,7 @@ handler.getAim = function(origin, maxDist)
     
     local target = getClosest()
     if target then
-        local targetPos = target.Position
-        
-        -- Calculate predicted location based on target velocity
-        if cfg.predictionEnabled then
-            local hrp = target.Parent:FindFirstChild("HumanoidRootPart")
-            if hrp and hrp.Velocity then
-                targetPos = targetPos + (hrp.Velocity * cfg.predictionAmount)
-            end
-        end
-        
-        local dir = (targetPos - origin).Unit
+        local dir = (target.Position - origin).Unit
         return dir, maxDist
     end
     
@@ -232,14 +218,7 @@ RunService.RenderStepped:Connect(function()
         if cfg.camlockTarget and cfg.camlockTarget.Character and not isWhitelisted(cfg.camlockTarget) then
             local part = cfg.camlockTarget.Character:FindFirstChild(cfg.camlockPart) or cfg.camlockTarget.Character:FindFirstChild("Head")
             if part then
-                local targetPos = part.Position
-                if cfg.predictionEnabled then
-                    local hrp = cfg.camlockTarget.Character:FindFirstChild("HumanoidRootPart")
-                    if hrp and hrp.Velocity then
-                        targetPos = targetPos + (hrp.Velocity * cfg.predictionAmount)
-                    end
-                end
-                local targetCFrame = CFrame.new(cam.CFrame.Position, targetPos)
+                local targetCFrame = CFrame.new(cam.CFrame.Position, part.Position)
                 cam.CFrame = cam.CFrame:Lerp(targetCFrame, math.clamp(cfg.camlockSmoothness, 0.01, 1))
             end
         end
@@ -597,7 +576,7 @@ local function addFloatSlider(parentPage, text, min, max, default, callback)
     valLbl.Size = UDim2.new(0.25, 0, 0, 15)
     valLbl.Position = UDim2.new(0, 10, 0, 15)
     valLbl.BackgroundTransparency = 1
-    valLbl.Text = string.format("%.3f", default)
+    valLbl.Text = string.format("%.2f", default)
     valLbl.TextColor3 = currentTheme.ACCENT
     valLbl.Font = Enum.Font.FredokaOne
     valLbl.TextSize = 10
@@ -627,7 +606,7 @@ local function addFloatSlider(parentPage, text, min, max, default, callback)
         local val = min + (max - min) * pos
         fill.Size = UDim2.new(pos, 0, 1, 0)
         knob.Position = UDim2.new(pos, 0, 0.5, 0)
-        valLbl.Text = string.format("%.3f", val)
+        valLbl.Text = string.format("%.2f", val)
         callback(val)
     end
     bg.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = true update(input) end end)
@@ -796,8 +775,6 @@ addToggle(combatPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, fun
 addSlider(combatPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
 addToggle(combatPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
 addColorPicker(combatPage, "FOV Color", cfg.silentAimFOVColor, function(c) cfg.silentAimFOVColor = c end)
-addToggle(combatPage, "Prediction", "lead targets when moving", cfg.predictionEnabled, function(v) cfg.predictionEnabled = v end)
-addFloatSlider(combatPage, "Prediction Speed", 0.05, 0.3, cfg.predictionAmount, function(v) cfg.predictionAmount = v end)
 addDropdown(combatPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
 addToggle(combatPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
 addToggle(combatPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
