@@ -15,7 +15,7 @@ local mouse = lp:GetMouse()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
     Title = "ella main da hood",
-    Text = "Script loaded successfully <3",
+    Text = "All Bullets Locked Directly to Body <3",
     Duration = 5
 })
 
@@ -36,10 +36,15 @@ local cfg = {
     silentAimFOVShow = false,
     silentAimFOVFilled = false,
     silentAimFOVOpacity = 0.2,
-    silentAimFOVColor = Color3.fromRGB(190, 100, 255),
+    silentAimFOVColor = Color3.fromRGB(255, 105, 180),
+    
+    hitboxEnabled = false,
+    hitboxSize = 4,
+    hitboxTransparency = 0.7,
+    hitboxColor = Color3.fromRGB(255, 105, 180),
     
     fogEnabled = false,
-    fogColor = Color3.fromRGB(200, 140, 210),
+    fogColor = Color3.fromRGB(255, 105, 180),
     fogStart = 0,
     fogEnd = 250,
     
@@ -139,17 +144,20 @@ local function getClosest()
     return best
 end
 
+-- FIXED BULLET LOCK: Forces 100% precision hits directly to the selected part
 handler.getAim = function(origin, maxDist)
     if not cfg.silentAim then return oldFunc(origin, maxDist) end
     if cfg.bypassRevolver then
         local currentTool = lp.Character and lp.Character:FindFirstChildOfClass("Tool")
         if currentTool and (currentTool.Name == "[Revolver]" or currentTool.Name == "Revolver") then return oldFunc(origin, maxDist) end
     end
+    
     local target = getClosest()
     if target then
         local dir = (target.Position - origin).Unit
-        return dir, maxDist or 200
+        return dir, maxDist
     end
+    
     return oldFunc(origin, maxDist)
 end
 
@@ -168,7 +176,6 @@ ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 10000
 ScreenGui.Parent = CoreGui
 
--- Render loop for Camlock, Fog & FOV
 local fovCircle = Drawing.new("Circle")
 fovCircle.Thickness = 2
 fovCircle.NumSides = 64
@@ -184,6 +191,23 @@ RunService.RenderStepped:Connect(function()
         fovCircle.Color = cfg.silentAimFOVColor
     else
         fovCircle.Visible = false
+    end
+
+    for _, v in pairs(Players:GetPlayers()) do
+        if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
+            local hrp = v.Character.HumanoidRootPart
+            if cfg.hitboxEnabled then
+                hrp.Size = Vector3.new(cfg.hitboxSize, cfg.hitboxSize, cfg.hitboxSize)
+                hrp.Transparency = cfg.hitboxTransparency
+                hrp.Color = cfg.hitboxColor
+                hrp.Material = Enum.Material.Neon
+                hrp.CanCollide = false
+            else
+                hrp.Size = Vector3.new(2, 2, 1)
+                hrp.Transparency = 1
+                hrp.CanCollide = true
+            end
+        end
     end
 
     if cfg.camlockEnabled and cfg.camlockActive then
@@ -213,49 +237,22 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- Theme Configurations
-local themes = {
-    Pink = {
-        ACCENT = Color3.fromRGB(190, 100, 255),
-        BG = Color3.fromRGB(10, 10, 12),
-        CARD_BG = Color3.fromRGB(16, 16, 20),
-        CARD = Color3.fromRGB(24, 24, 30),
-        SOFT_TEXT = Color3.fromRGB(190, 100, 255),
-        SUB_TEXT = Color3.fromRGB(160, 110, 210),
-        LIGHT_BTN = Color3.fromRGB(35, 28, 48),
-        TOGGLE_OFF = Color3.fromRGB(50, 38, 68),
-        STROKE = Color3.fromRGB(65, 45, 80),
-        SLIDER_BG = Color3.fromRGB(35, 28, 48)
-    },
-    Dark = {
-        ACCENT = Color3.fromRGB(190, 100, 255),
-        BG = Color3.fromRGB(10, 10, 12),
-        CARD_BG = Color3.fromRGB(16, 16, 20),
-        CARD = Color3.fromRGB(24, 24, 30),
-        SOFT_TEXT = Color3.fromRGB(190, 100, 255),
-        SUB_TEXT = Color3.fromRGB(160, 110, 210),
-        LIGHT_BTN = Color3.fromRGB(35, 28, 48),
-        TOGGLE_OFF = Color3.fromRGB(50, 38, 68),
-        STROKE = Color3.fromRGB(65, 45, 80),
-        SLIDER_BG = Color3.fromRGB(35, 28, 48)
-    },
-    Purple = {
-        ACCENT = Color3.fromRGB(190, 100, 255),
-        BG = Color3.fromRGB(10, 10, 12),
-        CARD_BG = Color3.fromRGB(16, 16, 20),
-        CARD = Color3.fromRGB(24, 24, 30),
-        SOFT_TEXT = Color3.fromRGB(210, 130, 255),
-        SUB_TEXT = Color3.fromRGB(170, 120, 225),
-        LIGHT_BTN = Color3.fromRGB(35, 28, 48),
-        TOGGLE_OFF = Color3.fromRGB(50, 38, 68),
-        STROKE = Color3.fromRGB(65, 45, 80),
-        SLIDER_BG = Color3.fromRGB(35, 28, 48)
-    }
+local pinkColor = Color3.fromRGB(255, 105, 180)
+local subPinkColor = Color3.fromRGB(255, 145, 205)
+
+local currentTheme = {
+    ACCENT = pinkColor,
+    BG = Color3.fromRGB(0, 0, 0),
+    CARD_BG = Color3.fromRGB(10, 10, 10),
+    CARD = Color3.fromRGB(18, 18, 18),
+    SOFT_TEXT = pinkColor,
+    SUB_TEXT = subPinkColor,
+    LIGHT_BTN = Color3.fromRGB(30, 20, 25),
+    TOGGLE_OFF = Color3.fromRGB(45, 25, 35),
+    STROKE = Color3.fromRGB(80, 30, 60),
+    SLIDER_BG = Color3.fromRGB(30, 20, 25)
 }
 
-local currentTheme = themes.Pink
-
--- Main Frame
 local Main = Instance.new("Frame", ScreenGui)
 Main.Name = "Main"
 Main.ClipsDescendants = true
@@ -270,14 +267,13 @@ local MainStroke = Instance.new("UIStroke", Main)
 MainStroke.Color = currentTheme.ACCENT
 MainStroke.Thickness = 2
 
--- Header
 local Header = Instance.new("Frame", Main)
 Header.Name = "Header"
 Header.Size = UDim2.new(1, 0, 0, 38)
 Header.BackgroundTransparency = 1
 
 local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, -180, 0, 16)
+Title.Size = UDim2.new(1, -20, 0, 16)
 Title.Position = UDim2.new(0, 12, 0, 3)
 Title.BackgroundTransparency = 1
 Title.Text = "<3 ella main da hood <3"
@@ -287,7 +283,7 @@ Title.Font = Enum.Font.FredokaOne
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local UserSubTitle = Instance.new("TextLabel", Header)
-UserSubTitle.Size = UDim2.new(1, -180, 0, 14)
+UserSubTitle.Size = UDim2.new(1, -20, 0, 14)
 UserSubTitle.Position = UDim2.new(0, 12, 0, 20)
 UserSubTitle.BackgroundTransparency = 1
 UserSubTitle.Text = lp.DisplayName .. " - @" .. lp.Name
@@ -296,94 +292,6 @@ UserSubTitle.TextSize = 10
 UserSubTitle.Font = Enum.Font.GothamMedium
 UserSubTitle.TextXAlignment = Enum.TextXAlignment.Left
 
--- Theme Switcher Buttons (Removed text tags from UI)
-local ThemeContainer = Instance.new("Frame", Header)
-ThemeContainer.Size = UDim2.new(0, 170, 0, 24)
-ThemeContainer.Position = UDim2.new(1, -178, 0.5, -12)
-ThemeContainer.BackgroundTransparency = 1
-
-local function createHeaderThemeBtn(name, text, xPos, width)
-    local btn = Instance.new("TextButton", ThemeContainer)
-    btn.Size = UDim2.new(0, width, 0, 22)
-    btn.Position = UDim2.new(0, xPos, 0, 1)
-    btn.BackgroundColor3 = currentTheme.CARD
-    btn.Text = text
-    btn.TextColor3 = currentTheme.SOFT_TEXT
-    btn.Font = Enum.Font.FredokaOne
-    btn.TextSize = 9
-    btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
-    local stroke = Instance.new("UIStroke", btn)
-    stroke.Color = currentTheme.STROKE
-    stroke.Thickness = 1
-    return btn
-end
-
-local themeBtnPink = createHeaderThemeBtn("Pink", "Pink", 0, 52)
-local themeBtnPurple = createHeaderThemeBtn("Purple", "Purple", 56, 58)
-local themeBtnDark = createHeaderThemeBtn("Dark", "Dark", 118, 52)
-
-local allCards = {}
-local allTabButtons = {}
-local allSearchBoxes = {}
-
-local function applyTheme(themeName)
-    if themes[themeName] then
-        currentTheme = themes[themeName]
-        Main.BackgroundColor3 = currentTheme.BG
-        MainStroke.Color = currentTheme.ACCENT
-        Title.TextColor3 = currentTheme.SOFT_TEXT
-        UserSubTitle.TextColor3 = currentTheme.SUB_TEXT
-        Content.BackgroundColor3 = currentTheme.CARD_BG
-
-        for _, btn in pairs({themeBtnPink, themeBtnPurple, themeBtnDark}) do
-            btn.BackgroundColor3 = currentTheme.CARD
-            btn.TextColor3 = currentTheme.SOFT_TEXT
-            for _, child in ipairs(btn:GetChildren()) do
-                if child:IsA("UIStroke") then child.Color = currentTheme.STROKE end
-            end
-        end
-
-        for _, data in pairs(allTabButtons) do
-            data.Bar.BackgroundColor3 = currentTheme.ACCENT
-            if data.Button.BackgroundTransparency == 0 then
-                data.Label.TextColor3 = currentTheme.SOFT_TEXT
-            else
-                data.Label.TextColor3 = currentTheme.SUB_TEXT
-            end
-        end
-
-        for _, card in ipairs(allCards) do
-            if card and card.Parent then
-                card.BackgroundColor3 = currentTheme.CARD
-                for _, child in ipairs(card:GetChildren()) do
-                    if child:IsA("UIStroke") then
-                        child.Color = currentTheme.STROKE
-                    elseif child:IsA("TextLabel") then
-                        child.TextColor3 = currentTheme.SOFT_TEXT
-                    end
-                end
-            end
-        end
-
-        for _, box in ipairs(allSearchBoxes) do
-            if box and box.Parent then
-                box.BackgroundColor3 = currentTheme.CARD
-                box.TextColor3 = currentTheme.SOFT_TEXT
-                box.PlaceholderColor3 = currentTheme.SUB_TEXT
-                for _, child in ipairs(box:GetChildren()) do
-                    if child:IsA("UIStroke") then child.Color = currentTheme.STROKE end
-                end
-            end
-        end
-    end
-end
-
-themeBtnPink.MouseButton1Click:Connect(function() applyTheme("Pink") end)
-themeBtnPurple.MouseButton1Click:Connect(function() applyTheme("Purple") end)
-themeBtnDark.MouseButton1Click:Connect(function() applyTheme("Dark") end)
-
--- Header Dragging
 local dragging, dragStart, startPos
 Header.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -407,7 +315,6 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Sidebar Frame
 local Sidebar = Instance.new("Frame", Main)
 Sidebar.Size = UDim2.new(0, 135, 1, -38)
 Sidebar.Position = UDim2.new(0, 0, 0, 38)
@@ -421,7 +328,6 @@ local SidePadding = Instance.new("UIPadding", Sidebar)
 SidePadding.PaddingLeft = UDim.new(0, 8)
 SidePadding.PaddingRight = UDim.new(0, 6)
 
--- Content Area
 local Content = Instance.new("Frame", Main)
 Content.Size = UDim2.new(1, -143, 1, -44)
 Content.Position = UDim2.new(0, 135, 0, 38)
@@ -429,7 +335,6 @@ Content.BackgroundColor3 = currentTheme.CARD_BG
 Content.BorderSizePixel = 0
 Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 8)
 
--- Tab Page Manager
 local pages = {}
 local tabButtons = {}
 
@@ -478,7 +383,7 @@ local function createPage(pageName, titleText, descText)
     return pageScroll
 end
 
-local function addTab(name, labelText, pageName)
+local function addTab(labelText, pageName)
     local btn = Instance.new("TextButton", Sidebar)
     btn.Size = UDim2.new(1, 0, 0, 32)
     btn.BackgroundColor3 = currentTheme.LIGHT_BTN
@@ -505,7 +410,6 @@ local function addTab(name, labelText, pageName)
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     tabButtons[pageName] = {Button = btn, Bar = bar, Label = lbl}
-    table.insert(allTabButtons, {Button = btn, Bar = bar, Label = lbl})
 
     btn.MouseButton1Click:Connect(function()
         for pName, pFrame in pairs(pages) do
@@ -527,15 +431,17 @@ end
 
 local combatPage = createPage("combat", "combat", "aim & combat tools")
 local camlockPage = createPage("camlock", "camlock", "camera lock & tracking")
+local hitboxPage = createPage("hitbox", "hitbox", "player hitbox expander")
 local visualsPage = createPage("visuals", "visuals", "fog & screen customization")
 local whitelistPage = createPage("whitelist", "whitelist", "whitelisted friends & players")
 
-addTab("Combat", "combat", "combat")
-addTab("Camlock", "camlock", "camlock")
-addTab("Visuals", "visuals", "visuals")
-addTab("Whitelist", "whitelist", "whitelist")
+addTab("Combat", "combat")
+addTab("Camlock", "camlock")
+addTab("Hitbox", "hitbox")
+addTab("Visuals", "visuals")
+addTab("Whitelist", "whitelist")
 
--- Component Builders
+local allCards = {}
 local function createCard(parentPage, height)
     local card = Instance.new("Frame", parentPage)
     card.Size = UDim2.new(1, -4, 0, height or 36)
@@ -737,7 +643,7 @@ local function addKeybindPicker(parentPage, text, currentKey, callback)
         listening = true
         keyBtn.Text = "..."
         keyBtn.BackgroundColor3 = currentTheme.ACCENT
-        keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        keyBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
         local connection
         connection = UIS.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -865,7 +771,6 @@ local function addColorPicker(parentPage, titleText, currentColor, callback)
     end
 end
 
--- POPULATE TABS
 addToggle(combatPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
 addSlider(combatPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
 addToggle(combatPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
@@ -882,6 +787,11 @@ end)
 addFloatSlider(camlockPage, "Smoothness", 0.01, 1, cfg.camlockSmoothness, function(v) cfg.camlockSmoothness = v end)
 addKeybindPicker(camlockPage, "Keybind", cfg.camlockKey, function(k) cfg.camlockKey = k end)
 addDropdown(camlockPage, "Target Part", bodyPartsList, cfg.camlockPart, function(v) cfg.camlockPart = v end)
+
+addToggle(hitboxPage, "Enable Hitbox", "enlarge enemy hitboxes", cfg.hitboxEnabled, function(v) cfg.hitboxEnabled = v end)
+addSlider(hitboxPage, "Hitbox Size", 2, 20, cfg.hitboxSize, function(v) cfg.hitboxSize = v end)
+addFloatSlider(hitboxPage, "Transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
+addColorPicker(hitboxPage, "Hitbox Color", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
 
 addToggle(visualsPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
 addSlider(visualsPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
@@ -910,7 +820,6 @@ searchBox.TextColor3 = currentTheme.SOFT_TEXT
 searchBox.Font = Enum.Font.GothamMedium
 searchBox.TextSize = 10
 searchBox.TextXAlignment = Enum.TextXAlignment.Left
-table.insert(allSearchBoxes, searchBox)
 
 local function filterWhitelist(query)
     query = string.lower(query)
