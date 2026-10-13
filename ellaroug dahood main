@@ -1,3 +1,6 @@
+--==================================================
+-- ELLA MAIN DA HOOD - COMBO SCRIPT (RIGHT CONTROL HIDE ONLY)
+--==================================================
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -14,7 +17,7 @@ local cam = workspace.CurrentCamera
 local mouse = lp:GetMouse()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "ella main da hood",
+    Title = "ella main Dahood",
     Text = "All Bullets Locked Directly to Body <3",
     Duration = 5
 })
@@ -47,6 +50,14 @@ local cfg = {
     fogColor = Color3.fromRGB(255, 105, 180),
     fogStart = 0,
     fogEnd = 250,
+    
+    speedEnabled = false,
+    speedValue = 50,
+    speedKey = Enum.KeyCode.X,
+    
+    jumpEnabled = false,
+    jumpValue = 50,
+    jumpKey = Enum.KeyCode.C,
     
     camlockEnabled = false,
     camlockActive = false,
@@ -144,7 +155,6 @@ local function getClosest()
     return best
 end
 
--- FIXED BULLET LOCK: Forces 100% precision hits directly to the selected part
 handler.getAim = function(origin, maxDist)
     if not cfg.silentAim then return oldFunc(origin, maxDist) end
     if cfg.bypassRevolver then
@@ -206,6 +216,20 @@ RunService.RenderStepped:Connect(function()
                 hrp.Size = Vector3.new(2, 2, 1)
                 hrp.Transparency = 1
                 hrp.CanCollide = true
+            end
+        end
+    end
+
+    local char = lp.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        if cfg.speedEnabled then
+            hum.WalkSpeed = cfg.speedValue
+        end
+        if cfg.jumpEnabled then
+            hum.JumpPower = cfg.jumpValue
+            if hum.UseJumpPower == false then
+                pcall(function() hum.JumpHeight = cfg.jumpValue / 7.2 end)
             end
         end
     end
@@ -276,7 +300,7 @@ local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, -20, 0, 16)
 Title.Position = UDim2.new(0, 12, 0, 3)
 Title.BackgroundTransparency = 1
-Title.Text = "<3 ella main da hood <3"
+Title.Text = "<3 ella main Dahood <3"
 Title.TextColor3 = currentTheme.SOFT_TEXT
 Title.TextSize = 11
 Title.Font = Enum.Font.FredokaOne
@@ -432,13 +456,15 @@ end
 local combatPage = createPage("combat", "combat", "aim & combat tools")
 local camlockPage = createPage("camlock", "camlock", "camera lock & tracking")
 local hitboxPage = createPage("hitbox", "hitbox", "player hitbox expander")
-local visualsPage = createPage("visuals", "visuals", "fog & screen customization")
+local visualsPage = createPage("visuals", "visuals", "speed & jump movement")
+local fogPage = createPage("fog", "fog", "atmosphere & world fog settings")
 local whitelistPage = createPage("whitelist", "whitelist", "whitelisted friends & players")
 
 addTab("Combat", "combat")
 addTab("Camlock", "camlock")
 addTab("Hitbox", "hitbox")
-addTab("Visuals", "visuals")
+addTab("Movement", "visuals")
+addTab("Fog", "fog")
 addTab("Whitelist", "whitelist")
 
 local allCards = {}
@@ -737,12 +763,12 @@ local function addColorPicker(parentPage, titleText, currentColor, callback)
     title.TextXAlignment = Enum.TextXAlignment.Left
 
     local colors = {
-        Color3.fromRGB(255, 90, 110), Color3.fromRGB(255, 155, 70), Color3.fromRGB(255, 225, 90),
-        Color3.fromRGB(175, 235, 90), Color3.fromRGB(95, 210, 125), Color3.fromRGB(110, 235, 195),
-        Color3.fromRGB(90, 220, 235), Color3.fromRGB(100, 175, 255), Color3.fromRGB(80, 120, 255),
-        Color3.fromRGB(55, 65, 170), Color3.fromRGB(155, 100, 240), Color3.fromRGB(205, 100, 245),
-        Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 125, 155), Color3.fromRGB(255, 175, 145),
-        Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 175, 190), Color3.fromRGB(35, 30, 45)
+        Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 60, 60), Color3.fromRGB(60, 140, 255),
+        Color3.fromRGB(60, 220, 100), Color3.fromRGB(255, 220, 50), Color3.fromRGB(160, 80, 255),
+        Color3.fromRGB(255, 140, 40), Color3.fromRGB(255, 255, 255), Color3.fromRGB(20, 20, 20),
+        Color3.fromRGB(255, 175, 205), Color3.fromRGB(255, 125, 155), Color3.fromRGB(90, 220, 235),
+        Color3.fromRGB(110, 235, 195), Color3.fromRGB(175, 235, 90), Color3.fromRGB(255, 155, 70),
+        Color3.fromRGB(155, 100, 240), Color3.fromRGB(180, 180, 190), Color3.fromRGB(40, 40, 50)
     }
 
     local swatches = {}
@@ -774,7 +800,7 @@ end
 addToggle(combatPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
 addSlider(combatPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
 addToggle(combatPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
-addColorPicker(combatPage, "FOV Color", cfg.silentAimFOVColor, function(c) cfg.silentAimFOVColor = c end)
+addColorPicker(combatPage, "FOV Color Palette", cfg.silentAimFOVColor, function(c) cfg.silentAimFOVColor = c end)
 addDropdown(combatPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
 addToggle(combatPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
 addToggle(combatPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
@@ -791,58 +817,51 @@ addDropdown(camlockPage, "Target Part", bodyPartsList, cfg.camlockPart, function
 addToggle(hitboxPage, "Enable Hitbox", "enlarge enemy hitboxes", cfg.hitboxEnabled, function(v) cfg.hitboxEnabled = v end)
 addSlider(hitboxPage, "Hitbox Size", 2, 20, cfg.hitboxSize, function(v) cfg.hitboxSize = v end)
 addFloatSlider(hitboxPage, "Transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
-addColorPicker(hitboxPage, "Hitbox Color", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
+addColorPicker(hitboxPage, "Hitbox Color Palette", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
 
-addToggle(visualsPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
-addSlider(visualsPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
-addSlider(visualsPage, "Fog End", 50, 1000, cfg.fogEnd, function(v) cfg.fogEnd = v end)
-addColorPicker(visualsPage, "Fog Color", cfg.fogColor, function(c) cfg.fogColor = c end)
+addToggle(visualsPage, "Speed Hack", "faster walk speed (Key: X)", cfg.speedEnabled, function(v) cfg.speedEnabled = v end)
+addSlider(visualsPage, "Speed Value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
+addToggle(visualsPage, "Jump Power", "higher jump height (Key: C)", cfg.jumpEnabled, function(v) cfg.jumpEnabled = v end)
+addSlider(visualsPage, "Jump Value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
 
+addToggle(fogPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
+addSlider(fogPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
+addSlider(fogPage, "Fog End", 50, 1000, cfg.fogEnd, function(v) cfg.fogEnd = v end)
+addColorPicker(fogPage, "Fog Color Palette", cfg.fogColor, function(c) cfg.fogColor = c end)
+
+local whitelistListHolder = createPage("whitelist", "whitelist", "whitelisted friends & players")
 local whitelistToggles = {}
-local searchCard = Instance.new("Frame", whitelistPage)
-searchCard.Size = UDim2.new(1, -4, 0, 34)
-searchCard.BackgroundColor3 = currentTheme.CARD
-searchCard.BorderSizePixel = 0
-Instance.new("UICorner", searchCard).CornerRadius = UDim.new(0, 8)
-local searchStroke = Instance.new("UIStroke", searchCard)
-searchStroke.Color = currentTheme.STROKE
-searchStroke.Thickness = 1
-table.insert(allCards, searchCard)
 
-local searchBox = Instance.new("TextBox", searchCard)
-searchBox.Size = UDim2.new(1, -20, 1, 0)
-searchBox.Position = UDim2.new(0, 10, 0, 0)
-searchBox.BackgroundTransparency = 1
-searchBox.PlaceholderText = "<3 Search players..."
-searchBox.PlaceholderColor3 = currentTheme.SUB_TEXT
-searchBox.Text = ""
-searchBox.TextColor3 = currentTheme.SOFT_TEXT
-searchBox.Font = Enum.Font.GothamMedium
-searchBox.TextSize = 10
-searchBox.TextXAlignment = Enum.TextXAlignment.Left
+local function rebuildWhitelistUI()
+    for _, tObj in ipairs(whitelistToggles) do
+        if tObj.Card and tObj.Card.Parent then
+            tObj.Card:Destroy()
+        end
+    end
+    whitelistToggles = {}
 
-local function filterWhitelist(query)
-    query = string.lower(query)
-    for _, item in ipairs(whitelistToggles) do
-        local matchName = string.find(string.lower(item.Text), query)
-        local matchSub = string.find(string.lower(item.Subtext), query)
-        if query == "" or matchName or matchSub then
-            item.Card.Visible = true
-        else
-            item.Card.Visible = false
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp then
+            local toggleObj = addToggle(whitelistListHolder, p.DisplayName, "@" .. p.Name, isWhitelisted(p), function(v)
+                cfg.whitelisted[p.Name] = v
+                cfg.whitelisted[p.UserId] = v
+            end)
+            table.insert(whitelistToggles, toggleObj)
         end
     end
 end
-searchBox:GetPropertyChangedSignal("Text"):Connect(function() filterWhitelist(searchBox.Text) end)
 
-for _, p in ipairs(Players:GetPlayers()) do
-    if p ~= lp then
-        local toggleObj = addToggle(whitelistPage, p.DisplayName, "@" .. p.Name, cfg.whitelisted[p.Name] or false, function(v)
-            cfg.whitelisted[p.Name] = v
-        end)
-        table.insert(whitelistToggles, toggleObj)
-    end
-end
+rebuildWhitelistUI()
+
+Players.PlayerAdded:Connect(function()
+    task.wait(0.5)
+    rebuildWhitelistUI()
+end)
+
+Players.PlayerRemoving:Connect(function()
+    task.wait(0.2)
+    rebuildWhitelistUI()
+end)
 
 tabButtons["combat"].Button.BackgroundTransparency = 0
 tabButtons["combat"].Bar.Visible = true
@@ -854,6 +873,10 @@ UIS.InputBegan:Connect(function(i, gpe)
     if cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
         cfg.camlockActive = not cfg.camlockActive
         if not cfg.camlockActive then cfg.camlockTarget = nil end
+    elseif i.KeyCode == cfg.speedKey then
+        cfg.speedEnabled = not cfg.speedEnabled
+    elseif i.KeyCode == cfg.jumpKey then
+        cfg.jumpEnabled = not cfg.jumpEnabled
     elseif i.KeyCode == cfg.uiToggleKey then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
