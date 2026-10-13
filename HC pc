@@ -1,0 +1,1461 @@
+local UIS = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local CoreGui = game:GetService("CoreGui")
+local Lighting = game:GetService("Lighting")
+
+local lp = Players.LocalPlayer
+while not lp do
+    task.wait()
+    lp = Players.LocalPlayer
+end
+
+local cam = workspace.CurrentCamera
+local mouse = lp:GetMouse()
+
+-- Capture original lighting properties
+local defaultLighting = {
+    FogColor = Lighting.FogColor,
+    FogStart = Lighting.FogStart,
+    FogEnd = Lighting.FogEnd,
+    OutdoorAmbient = Lighting.OutdoorAmbient,
+    Ambient = Lighting.Ambient,
+    Brightness = Lighting.Brightness,
+    ColorShift_Bottom = Lighting.ColorShift_Bottom,
+    ColorShift_Top = Lighting.ColorShift_Top
+}
+
+-- Capture original Atmosphere densities
+local originalAtmospheres = {}
+for _, child in ipairs(Lighting:GetChildren()) do
+    if child:IsA("Atmosphere") then
+        originalAtmospheres[child] = {
+            Density = child.Density,
+            Haze = child.Haze,
+            Glare = child.Glare,
+            Offset = child.Offset,
+            Color = child.Color,
+            Decay = child.Decay
+        }
+    end
+end
+
+-- Game-specific feature policy:
+-- PlaceId 75882626617183: Silent Aim, Camlock, Custom Fog, Speed, and Jump are disabled.
+-- PlaceId 9825515356 and other games keep the existing behavior.
+local RESTRICTED_PLACE_ID = 75882626617183
+local restrictedGame = game.PlaceId == RESTRICTED_PLACE_ID
+local silentAimAllowed = not restrictedGame
+local camlockAllowed = not restrictedGame
+local fogAllowed = not restrictedGame
+local movementAllowed = not restrictedGame
+
+local cfg = {
+    silentAim = silentAimAllowed,
+    silentAimKey = Enum.KeyCode.V,
+    uiToggleKey = Enum.KeyCode.RightControl,
+    silentAimHitChance = 100,
+    silentAimFOV = 150,
+    silentAimFOVShow = false,
+    silentAimFOVFilled = false,
+    silentAimFOVOpacity = 0.2,
+    silentAimFOVColor = Color3.fromRGB(255, 120, 190),
+    fogEnabled = fogAllowed and false or false,
+    fogColor = Color3.fromRGB(255, 160, 215),
+    fogStart = 30,
+    fogEnd = 250,
+    
+    -- Camlock Configurations
+    camlockEnabled = camlockAllowed and false or false,
+    camlockActive = false,
+    camlockSmoothness = 0.25,
+    camlockKey = Enum.KeyCode.Q,
+    camlockPart = "Head",
+    camlockTarget = nil,
+    
+    -- Speed Boost Configurations
+    speedHackMaster = movementAllowed and false or false,
+    speedBoostActive = false,
+    speedValue = 50,
+    minSpeed = 16,
+    maxSpeed = 1000,
+    defaultSpeed = 16,
+    speedKey = Enum.KeyCode.X,
+    
+    -- Jump Power Configurations
+    jumpPowerMaster = movementAllowed and false or false,
+    jumpPowerActive = false,
+    jumpValue = 50,
+    minJump = 30,
+    maxJump = 500,
+    defaultJump = 50,
+    jumpKey = Enum.KeyCode.C,
+    
+    silentAimPart = "Head",
+    silentAimClosestPart = false,
+    
+    silentAimTeamCheck = false,
+    silentAimWallCheck = false,
+    silentAimMaxDist = 1000,
+    
+    silentAimPredX = 0,
+    silentAimPredY = 0,
+    
+    bypassRevolver = false,
+    
+    -- Whitelist Configuration
+    whitelisted = {}
+}
+
+local bodyPartsList = {
+    "Head", "UpperTorso", "HumanoidRootPart", "LowerTorso",
+    "LeftUpperArm", "RightUpperArm", "LeftLowerArm", "RightLowerArm",
+    "LeftHand", "RightHand", "LeftUpperLeg", "RightUpperLeg",
+    "LeftLowerLeg", "RightLowerLeg", "LeftFoot", "RightFoot"
+}
+
+-- Jump Boost Force Handler
+local function applyCustomJump(hum)
+    if cfg.jumpPowerMaster and cfg.jumpPowerActive then
+        local hrp = hum.Parent and hum.Parent:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            task.defer(function()
+                hrp.AssemblyLinearVelocity = Vector3.new(
+                    hrp.AssemblyLinearVelocity.X,
+                    cfg.jumpValue * 1.5,
+                    hrp.AssemblyLinearVelocity.Z
+                )
+            end)
+        end
+    end
+end
+
+local function setupCharacterJumping(char)
+    if not char then return end
+    local hum = char:WaitForChild("Humanoid", 3)
+    if hum then
+        hum.Jumping:Connect(function()
+            applyCustomJump(hum)
+        end)
+    end
+end
+
+if lp.Character then
+    setupCharacterJumping(lp.Character)
+end
+
+lp.CharacterAdded:Connect(function(char)
+    setupCharacterJumping(char)
+end)
+
+-- Movement Loop (Speed & Continuous Jump Setup)
+RunService.Stepped:Connect(function()
+    local char = lp.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        
+        -- Speed Enforcement
+        if cfg.speedHackMaster and cfg.speedBoostActive then
+            if hum then
+                hum.WalkSpeed = cfg.speedValue
+            end
+            if hum and hrp and hum.MoveDirection.Magnitude > 0 then
+                hrp.AssemblyLinearVelocity = Vector3.new(
+                    hum.MoveDirection.X * cfg.speedValue,
+                    hrp.AssemblyLinearVelocity.Y,
+                    hum.MoveDirection.Z * cfg.speedValue
+                )
+            end
+        else
+            if hum then
+                hum.WalkSpeed = cfg.defaultSpeed
+            end
+        end
+
+        -- Jump Power Enforcement
+        if hum then
+            if cfg.jumpPowerMaster and cfg.jumpPowerActive then
+                hum.UseJumpPower = true
+                hum.JumpPower = cfg.jumpValue
+                hum.JumpHeight = cfg.jumpValue / 3
+            else
+                hum.JumpPower = cfg.defaultJump
+            end
+        end
+    end
+end)
+
+-- Custom Fog Atmosphere Engine
+local function getOrCreateFogAtmosphere()
+    local at = Lighting:FindFirstChild("EllarougFog")
+    if not at then
+        at = Instance.new("Atmosphere")
+        at.Name = "EllarougFog"
+        at.Parent = Lighting
+    end
+    return at
+end
+
+local function removeFogAtmosphere()
+    local at = Lighting:FindFirstChild("EllarougFog")
+    if at then
+        at:Destroy()
+    end
+end
+
+local function getHum(p)
+    local c = p and p.Character
+    return c and c:FindFirstChildOfClass("Humanoid")
+end
+
+local function getHRP(p)
+    local c = p and p.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
+end
+
+local function isAlive(p)
+    local h = getHum(p)
+    return h and h.Health > 0
+end
+
+local function sameTeam(p)
+    return lp.Team and p.Team and lp.Team == p.Team
+end
+
+local function isWhitelisted(p)
+    return cfg.whitelisted[p.UserId] == true
+end
+
+-- Get closest player to cursor specifically for Camlock
+local function getClosestPlayerForCamlock()
+    local closestPlayer = nil
+    local shortestDist = math.huge
+    local mousePos = UIS:GetMouseLocation()
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and isAlive(p) and not isWhitelisted(p) then
+            local char = p.Character
+            if char then
+                local part = char:FindFirstChild(cfg.camlockPart) or char:FindFirstChild("Head")
+                if part then
+                    local sp, onScreen = cam:WorldToViewportPoint(part.Position)
+                    if onScreen then
+                        local dist2D = (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude
+                        if dist2D < shortestDist then
+                            shortestDist = dist2D
+                            closestPlayer = part
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- Cleanup existing UI
+if CoreGui:FindFirstChild("EllarougHoodCustomUI") then
+    CoreGui.EllarougHoodCustomUI:Destroy()
+end
+if lp:FindFirstChild("PlayerGui") and lp.PlayerGui:FindFirstChild("EllarougHoodCustomUI") then
+    lp.PlayerGui.EllarougHoodCustomUI:Destroy()
+end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "EllarougHoodCustomUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 10000
+
+local success, _ = pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not success or not ScreenGui.Parent then
+    ScreenGui.Parent = lp:WaitForChild("PlayerGui", 5) or lp.PlayerGui
+end
+
+-- Render loop for Fog, FOV & Camlock
+RunService.PreRender:Connect(function()
+    if cfg.camlockEnabled and cfg.camlockActive then
+        if not cfg.camlockTarget or not cfg.camlockTarget.Parent or not isAlive(Players:GetPlayerFromCharacter(cfg.camlockTarget.Parent)) then
+            cfg.camlockTarget = getClosestPlayerForCamlock()
+        end
+        if cfg.camlockTarget then
+            local targetPos = cfg.camlockTarget.Position
+            local currentCFrame = cam.CFrame
+            local goalCFrame = CFrame.new(currentCFrame.Position, targetPos)
+            cam.CFrame = currentCFrame:Lerp(goalCFrame, math.clamp(cfg.camlockSmoothness, 0.01, 1))
+        end
+    else
+        cfg.camlockTarget = nil
+    end
+
+    if fogAllowed and cfg.fogEnabled then
+        local fogAtmosphere = getOrCreateFogAtmosphere()
+        
+        for _, child in ipairs(Lighting:GetChildren()) do
+            if child:IsA("Atmosphere") and child ~= fogAtmosphere then
+                child.Density = 0
+                child.Haze = 0
+            end
+        end
+
+        Lighting.FogColor = cfg.fogColor
+        Lighting.FogStart = math.max(0, cfg.fogStart)
+        Lighting.FogEnd = math.max(cfg.fogStart + 1, cfg.fogEnd)
+
+        fogAtmosphere.Color = cfg.fogColor
+        fogAtmosphere.Decay = cfg.fogColor
+        fogAtmosphere.Density = math.clamp(1 - ((cfg.fogEnd - cfg.fogStart) / 1000), 0.15, 0.95)
+        fogAtmosphere.Haze = 2.5
+        fogAtmosphere.Glare = 0
+        fogAtmosphere.Offset = math.clamp(cfg.fogStart / 500, 0, 1)
+    else
+        removeFogAtmosphere()
+
+        Lighting.FogColor = defaultLighting.FogColor
+        Lighting.FogStart = defaultLighting.FogStart
+        Lighting.FogEnd = defaultLighting.FogEnd
+
+        for at, props in pairs(originalAtmospheres) do
+            if at and at.Parent == Lighting then
+                at.Density = props.Density
+                at.Haze = props.Haze
+                at.Glare = props.Glare
+                at.Offset = props.Offset
+                at.Color = props.Color
+                at.Decay = props.Decay
+            end
+        end
+    end
+end)
+
+-- Drawing FOV Setup
+local fovCircle, fovGlow
+if Drawing then
+    pcall(function()
+        fovCircle = Drawing.new("Circle")
+        fovCircle.Thickness = 1
+        fovCircle.NumSides = 96
+        fovCircle.Radius = cfg.silentAimFOV
+        fovCircle.Color = cfg.silentAimFOVColor
+        fovCircle.Filled = cfg.silentAimFOVFilled
+        fovCircle.Visible = cfg.silentAimFOVShow
+        fovCircle.Transparency = 1 - cfg.silentAimFOVOpacity
+
+        fovGlow = Drawing.new("Circle")
+        fovGlow.Thickness = 0.5
+        fovGlow.NumSides = 96
+        fovGlow.Radius = cfg.silentAimFOV + 1
+        fovGlow.Color = cfg.silentAimFOVColor
+        fovGlow.Filled = false
+        fovGlow.Visible = cfg.silentAimFOVShow
+        fovGlow.Transparency = 0.5
+    end)
+end
+
+local silentAimCachedPart = nil
+
+local function isHoldingRevolver()
+    if not cfg.bypassRevolver then return false end
+    local char = lp.Character
+    if not char then return false end
+    
+    local tool = char:FindFirstChildOfClass("Tool")
+    if tool then
+        local toolName = string.lower(tool.Name)
+        if string.find(toolName, "revolver") or string.find(toolName, "rev") then
+            return true
+        end
+    end
+    return false
+end
+
+local function wallBetween(pos)
+    if not cfg.silentAimWallCheck then return false end
+    local ro = cam.CFrame.Position
+    local rd = pos - ro
+    local params = RaycastParams.new()
+    params.FilterDescendantsInstances = {lp.Character}
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local hit = workspace:Raycast(ro, rd, params)
+    if not hit then return false end
+    for _, p in pairs(Players:GetPlayers()) do
+        if p.Character and hit.Instance:IsDescendantOf(p.Character) then return false end
+    end
+    return true
+end
+
+local function safeWorldToViewportPoint(pos)
+    local sp, on = Vector3.new(), false
+    pcall(function()
+        sp, on = cam:WorldToViewportPoint(pos)
+    end)
+    return sp, on
+end
+
+local function getClosestBodyPart(char)
+    local closestPart, shortestDist = nil, math.huge
+    local mousePos = UIS:GetMouseLocation()
+    for _, pName in ipairs(bodyPartsList) do
+        local part = char:FindFirstChild(pName)
+        if part then
+            local screenPos, onScreen = safeWorldToViewportPoint(part.Position)
+            local dist = onScreen and (Vector2.new(screenPos.X, screenPos.Y) - mousePos).Magnitude or math.huge
+            if dist < shortestDist then
+                shortestDist = dist
+                closestPart = part
+            end
+        end
+    end
+    return closestPart or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getTargetPart(char)
+    if not char then return nil end
+    if cfg.silentAimClosestPart then
+        return getClosestBodyPart(char)
+    end
+    return char:FindFirstChild(cfg.silentAimPart) or char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
+end
+
+local function getClosestPlayerToCursor()
+    if isHoldingRevolver() then return nil end
+    
+    local closestPlayer = nil
+    local shortestDist = cfg.silentAimFOV
+    local mousePos = UIS:GetMouseLocation()
+
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= lp and isAlive(p) and not isWhitelisted(p) then
+            if cfg.silentAimTeamCheck and sameTeam(p) then continue end
+            local hrp = getHRP(p)
+            if hrp then
+                local dist3D = (hrp.Position - cam.CFrame.Position).Magnitude
+                if dist3D <= cfg.silentAimMaxDist then
+                    local sp, onScreen = safeWorldToViewportPoint(hrp.Position)
+                    if onScreen then
+                        local dist2D = (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude
+                        if dist2D < shortestDist then
+                            local part = getTargetPart(p.Character)
+                            if part and not wallBetween(part.Position) then
+                                shortestDist = dist2D
+                                closestPlayer = part
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- HOOK METAMETHOD (Fixed for Hood Custom compatibility)
+local _grm = getrawmetatable(game)
+local _oldIndex = _grm.__index
+setreadonly(_grm, false)
+
+_grm.__index = function(self, key)
+    if not checkcaller() and self == mouse and cfg.silentAim and not isHoldingRevolver() then
+        if (key == "Hit" or key == "Target" or key == "UnitRay") and silentAimCachedPart then
+            if math.random(1, 100) <= cfg.silentAimHitChance then
+                local origin = cam.CFrame.Position
+                local hitPos = silentAimCachedPart.Position + Vector3.new(
+                    silentAimCachedPart.AssemblyLinearVelocity.X * cfg.silentAimPredX,
+                    silentAimCachedPart.AssemblyLinearVelocity.Y * cfg.silentAimPredY,
+                    silentAimCachedPart.AssemblyLinearVelocity.Z * cfg.silentAimPredX
+                )
+                if key == "UnitRay" then
+                    return Ray.new(origin, (hitPos - origin).Unit)
+                elseif key == "Hit" then
+                    return CFrame.new(hitPos)
+                elseif key == "Target" then
+                    return silentAimCachedPart
+                end
+            end
+        end
+    end
+    return _oldIndex(self, key)
+end
+setreadonly(_grm, true)
+
+-- Separate FOV ScreenGui
+local FOVScreenGui = Instance.new("ScreenGui")
+FOVScreenGui.Name = "EllarougFOVOverlay"
+FOVScreenGui.ResetOnSpawn = false
+FOVScreenGui.IgnoreGuiInset = true
+FOVScreenGui.DisplayOrder = ScreenGui.DisplayOrder + 1
+FOVScreenGui.Parent = ScreenGui.Parent
+
+local fovGui = Instance.new("Frame")
+fovGui.Name = "FOVCircle"
+fovGui.AnchorPoint = Vector2.new(0.5, 0.5)
+fovGui.Size = UDim2.fromOffset(cfg.silentAimFOV * 2, cfg.silentAimFOV * 2)
+fovGui.Position = UDim2.fromOffset(0, 0)
+fovGui.BackgroundTransparency = 1
+fovGui.BorderSizePixel = 0
+fovGui.ZIndex = 1000
+fovGui.Visible = cfg.silentAimFOVShow
+fovGui.Parent = FOVScreenGui
+
+local fovGuiCorner = Instance.new("UICorner", fovGui)
+fovGuiCorner.CornerRadius = UDim.new(1, 0)
+
+local fovGuiStroke = Instance.new("UIStroke", fovGui)
+fovGuiStroke.Thickness = 1
+fovGuiStroke.Transparency = 0
+fovGuiStroke.Color = cfg.silentAimFOVColor
+
+local fovGuiGlow = Instance.new("Frame")
+fovGuiGlow.Name = "FOVGlow"
+fovGuiGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+fovGuiGlow.Size = UDim2.fromOffset((cfg.silentAimFOV + 2) * 2, (cfg.silentAimFOV + 2) * 2)
+fovGuiGlow.Position = UDim2.fromOffset(0, 0)
+fovGuiGlow.BackgroundTransparency = 1
+fovGuiGlow.BorderSizePixel = 0
+fovGuiGlow.ZIndex = 999
+fovGuiGlow.Visible = cfg.silentAimFOVShow
+fovGuiGlow.Parent = FOVScreenGui
+
+local fovGuiGlowCorner = Instance.new("UICorner", fovGuiGlow)
+fovGuiGlowCorner.CornerRadius = UDim.new(1, 0)
+
+local fovGuiGlowStroke = Instance.new("UIStroke", fovGuiGlow)
+fovGuiGlowStroke.Thickness = 0.5
+fovGuiGlowStroke.Transparency = 0.65
+fovGuiGlowStroke.Color = cfg.silentAimFOVColor
+
+RunService.RenderStepped:Connect(function()
+    local mousePos = UIS:GetMouseLocation()
+    local fovVisible = cfg.silentAimFOVShow
+
+    pcall(function()
+        if fovCircle then
+            fovCircle.Position = mousePos
+            fovCircle.Radius = cfg.silentAimFOV
+            fovCircle.Color = cfg.silentAimFOVColor
+            fovCircle.Visible = fovVisible
+        end
+        if fovGlow then
+            fovGlow.Position = mousePos
+            fovGlow.Radius = cfg.silentAimFOV + 1
+            fovGlow.Color = cfg.silentAimFOVColor
+            fovGlow.Visible = fovVisible
+        end
+    end)
+
+    if fovGui and fovGui.Parent then
+        fovGui.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
+        fovGui.Size = UDim2.fromOffset(cfg.silentAimFOV * 2, cfg.silentAimFOV * 2)
+        fovGui.Visible = fovVisible
+        fovGuiStroke.Color = cfg.silentAimFOVColor
+
+        fovGuiGlow.Position = UDim2.fromOffset(mousePos.X, mousePos.Y)
+        fovGuiGlow.Size = UDim2.fromOffset((cfg.silentAimFOV + 2) * 2, (cfg.silentAimFOV + 2) * 2)
+        fovGuiGlow.Visible = fovVisible
+        fovGuiGlowStroke.Color = cfg.silentAimFOVColor
+    end
+
+    if cfg.silentAim then
+        silentAimCachedPart = getClosestPlayerToCursor()
+    else
+        silentAimCachedPart = nil
+    end
+end)
+
+-- Theme Configurations
+local themes = {
+    Pink = {
+        ACCENT = Color3.fromRGB(255, 100, 180),
+        BG = Color3.fromRGB(255, 246, 250),
+        CARD_BG = Color3.fromRGB(255, 252, 254),
+        CARD = Color3.fromRGB(255, 255, 255),
+        SOFT_TEXT = Color3.fromRGB(110, 40, 80),
+        SUB_TEXT = Color3.fromRGB(160, 95, 130),
+        LIGHT_BTN = Color3.fromRGB(255, 238, 246),
+        TOGGLE_OFF = Color3.fromRGB(235, 205, 222),
+        STROKE = Color3.fromRGB(248, 220, 235),
+        SLIDER_BG = Color3.fromRGB(250, 225, 240)
+    },
+    Dark = {
+        ACCENT = Color3.fromRGB(255, 120, 180),
+        BG = Color3.fromRGB(20, 18, 22),
+        CARD_BG = Color3.fromRGB(26, 23, 29),
+        CARD = Color3.fromRGB(35, 31, 39),
+        SOFT_TEXT = Color3.fromRGB(255, 255, 255),
+        SUB_TEXT = Color3.fromRGB(200, 180, 195),
+        LIGHT_BTN = Color3.fromRGB(48, 41, 55),
+        TOGGLE_OFF = Color3.fromRGB(60, 50, 70),
+        STROKE = Color3.fromRGB(55, 45, 65),
+        SLIDER_BG = Color3.fromRGB(45, 38, 52)
+    },
+    Purple = {
+        ACCENT = Color3.fromRGB(190, 100, 255),
+        BG = Color3.fromRGB(246, 242, 255),
+        CARD_BG = Color3.fromRGB(252, 250, 255),
+        CARD = Color3.fromRGB(255, 255, 255),
+        SOFT_TEXT = Color3.fromRGB(75, 35, 110),
+        SUB_TEXT = Color3.fromRGB(130, 95, 165),
+        LIGHT_BTN = Color3.fromRGB(238, 228, 255),
+        TOGGLE_OFF = Color3.fromRGB(215, 195, 235),
+        STROKE = Color3.fromRGB(230, 210, 250),
+        SLIDER_BG = Color3.fromRGB(238, 225, 252)
+    }
+}
+
+local currentTheme = themes.Pink
+
+-- Main Frame
+local Main = Instance.new("Frame")
+Main.Name = "Main"
+Main.ClipsDescendants = true
+Main.Size = UDim2.new(0, 660, 0, 530)
+Main.Position = UDim2.new(0.5, -330, 0.5, -265)
+Main.BackgroundColor3 = currentTheme.BG
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner", Main)
+MainCorner.CornerRadius = UDim.new(0, 14)
+
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Color = currentTheme.ACCENT
+MainStroke.Thickness = 2.5
+
+-- Header
+local Header = Instance.new("Frame", Main)
+Header.Name = "Header"
+Header.Size = UDim2.new(1, 0, 0, 48)
+Header.BackgroundTransparency = 1
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -220, 0, 20)
+Title.Position = UDim2.new(0, 16, 0, 4)
+Title.BackgroundTransparency = 1
+Title.Text = "♡ 🎀 ♡ ELLAROUG MAIN HC ♡ ✨ ♡"
+Title.TextColor3 = currentTheme.SOFT_TEXT
+Title.TextSize = 13
+Title.Font = Enum.Font.FredokaOne
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local UserSubTitle = Instance.new("TextLabel", Header)
+UserSubTitle.Name = "UserSubTitle"
+UserSubTitle.Size = UDim2.new(1, -220, 0, 18)
+UserSubTitle.Position = UDim2.new(0, 16, 0, 24)
+UserSubTitle.BackgroundTransparency = 1
+UserSubTitle.Text = lp.DisplayName .. " - @" .. lp.Name
+UserSubTitle.TextColor3 = currentTheme.SUB_TEXT
+UserSubTitle.TextSize = 11
+UserSubTitle.Font = Enum.Font.GothamMedium
+UserSubTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+-- Header Theme Switcher Buttons
+local ThemeContainer = Instance.new("Frame", Header)
+ThemeContainer.Size = UDim2.new(0, 210, 0, 28)
+ThemeContainer.Position = UDim2.new(1, -224, 0.5, -14)
+ThemeContainer.BackgroundTransparency = 1
+
+local function createHeaderThemeBtn(name, text, xPos, width)
+    local btn = Instance.new("TextButton", ThemeContainer)
+    btn.Size = UDim2.new(0, width, 0, 26)
+    btn.Position = UDim2.new(0, xPos, 0, 1)
+    btn.BackgroundColor3 = currentTheme.CARD
+    btn.Text = text
+    btn.TextColor3 = currentTheme.SOFT_TEXT
+    btn.Font = Enum.Font.FredokaOne
+    btn.TextSize = 10
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = currentTheme.STROKE
+    stroke.Thickness = 1
+    return btn
+end
+
+local themeBtnPink = createHeaderThemeBtn("Pink", "♥ Pink ♡", 0, 66)
+local themeBtnPurple = createHeaderThemeBtn("Purple", "♥ Purple ♡", 70, 70)
+local themeBtnDark = createHeaderThemeBtn("Dark", "♥ Dark ♡", 144, 66)
+
+local allCards = {}
+local allTabButtons = {}
+local allSearchBoxes = {}
+
+local function applyTheme(themeName)
+    if themes[themeName] then
+        currentTheme = themes[themeName]
+        Main.BackgroundColor3 = currentTheme.BG
+        MainStroke.Color = currentTheme.ACCENT
+        Title.TextColor3 = currentTheme.SOFT_TEXT
+        UserSubTitle.TextColor3 = currentTheme.SUB_TEXT
+        Content.BackgroundColor3 = currentTheme.CARD_BG
+
+        for _, btn in pairs({themeBtnPink, themeBtnPurple, themeBtnDark}) do
+            btn.BackgroundColor3 = currentTheme.CARD
+            btn.TextColor3 = currentTheme.SOFT_TEXT
+            for _, child in ipairs(btn:GetChildren()) do
+                if child:IsA("UIStroke") then child.Color = currentTheme.STROKE end
+            end
+        end
+
+        for _, data in pairs(allTabButtons) do
+            data.Bar.BackgroundColor3 = currentTheme.ACCENT
+            if data.Button.BackgroundTransparency == 0 then
+                data.Label.TextColor3 = currentTheme.SOFT_TEXT
+            else
+                data.Label.TextColor3 = currentTheme.SUB_TEXT
+            end
+        end
+
+        for _, card in ipairs(allCards) do
+            if card and card.Parent then
+                card.BackgroundColor3 = currentTheme.CARD
+                for _, child in ipairs(card:GetChildren()) do
+                    if child:IsA("UIStroke") then
+                        child.Color = currentTheme.STROKE
+                    elseif child:IsA("TextLabel") then
+                        child.TextColor3 = currentTheme.SOFT_TEXT
+                    end
+                end
+            end
+        end
+
+        for _, box in ipairs(allSearchBoxes) do
+            if box and box.Parent then
+                box.BackgroundColor3 = currentTheme.CARD
+                box.TextColor3 = currentTheme.SOFT_TEXT
+                box.PlaceholderColor3 = currentTheme.SUB_TEXT
+                for _, child in ipairs(box:GetChildren()) do
+                    if child:IsA("UIStroke") then child.Color = currentTheme.STROKE end
+                end
+            end
+        end
+    end
+end
+
+themeBtnPink.MouseButton1Click:Connect(function() applyTheme("Pink") end)
+themeBtnPurple.MouseButton1Click:Connect(function() applyTheme("Purple") end)
+themeBtnDark.MouseButton1Click:Connect(function() applyTheme("Dark") end)
+
+-- Header Dragging
+local dragging, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = Main.Position
+    end
+end)
+
+Header.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        Main.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Sidebar Frame
+local Sidebar = Instance.new("Frame", Main)
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 170, 1, -48)
+Sidebar.Position = UDim2.new(0, 0, 0, 48)
+Sidebar.BackgroundTransparency = 1
+
+local SideList = Instance.new("UIListLayout", Sidebar)
+SideList.SortOrder = Enum.SortOrder.LayoutOrder
+SideList.Padding = UDim.new(0, 8)
+
+local SidePadding = Instance.new("UIPadding", Sidebar)
+SidePadding.PaddingLeft = UDim.new(0, 12)
+SidePadding.PaddingRight = UDim.new(0, 8)
+
+-- Content Area
+local Content = Instance.new("Frame", Main)
+Content.Name = "Content"
+Content.ClipsDescendants = true
+Content.Size = UDim2.new(1, -180, 1, -56)
+Content.Position = UDim2.new(0, 170, 0, 48)
+Content.BackgroundColor3 = currentTheme.CARD_BG
+Content.BorderSizePixel = 0
+
+local ContentCorner = Instance.new("UICorner", Content)
+ContentCorner.CornerRadius = UDim.new(0, 10)
+
+-- Tab Page Manager
+local pages = {}
+local tabButtons = {}
+
+local function createPage(pageName, titleText, descText)
+    local pageScroll = Instance.new("ScrollingFrame", Content)
+    pageScroll.Name = pageName .. "Page"
+    pageScroll.ClipsDescendants = true
+    pageScroll.Size = UDim2.new(1, -16, 1, -16)
+    pageScroll.Position = UDim2.new(0, 8, 0, 8)
+    pageScroll.BackgroundTransparency = 1
+    pageScroll.BorderSizePixel = 0
+    pageScroll.ScrollBarThickness = 4
+    pageScroll.ScrollBarImageColor3 = currentTheme.ACCENT
+    pageScroll.Visible = false
+
+    local pList = Instance.new("UIListLayout", pageScroll)
+    pList.SortOrder = Enum.SortOrder.LayoutOrder
+    pList.Padding = UDim.new(0, 8)
+
+    pList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        pageScroll.CanvasSize = UDim2.new(0, 0, 0, pList.AbsoluteContentSize.Y + 15)
+    end)
+
+    local headerFrame = Instance.new("Frame", pageScroll)
+    headerFrame.Size = UDim2.new(1, 0, 0, 42)
+    headerFrame.BackgroundTransparency = 1
+    headerFrame.LayoutOrder = 0
+
+    local pTitle = Instance.new("TextLabel", headerFrame)
+    pTitle.Size = UDim2.new(1, 0, 0, 22)
+    pTitle.BackgroundTransparency = 1
+    pTitle.Text = "♥ " .. titleText .. " ♡"
+    pTitle.TextColor3 = currentTheme.SOFT_TEXT
+    pTitle.Font = Enum.Font.FredokaOne
+    pTitle.TextSize = 16
+    pTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+    local pDesc = Instance.new("TextLabel", headerFrame)
+    pDesc.Size = UDim2.new(1, 0, 0, 16)
+    pDesc.Position = UDim2.new(0, 0, 0, 22)
+    pDesc.BackgroundTransparency = 1
+    pDesc.Text = descText or ""
+    pDesc.TextColor3 = currentTheme.SUB_TEXT
+    pDesc.Font = Enum.Font.GothamMedium
+    pDesc.TextSize = 11
+    pDesc.TextXAlignment = Enum.TextXAlignment.Left
+
+    pages[pageName] = pageScroll
+    return pageScroll
+end
+
+local function addTab(name, labelText, pageName)
+    local btn = Instance.new("TextButton", Sidebar)
+    btn.Name = name .. "Tab"
+    btn.Size = UDim2.new(1, 0, 0, 42)
+    btn.BackgroundColor3 = currentTheme.LIGHT_BTN
+    btn.BackgroundTransparency = 1
+    btn.Text = ""
+    btn.AutoButtonColor = false
+
+    local c = Instance.new("UICorner", btn)
+    c.CornerRadius = UDim.new(0, 8)
+
+    local bar = Instance.new("Frame", btn)
+    bar.Name = "Indicator"
+    bar.Size = UDim2.new(0, 4, 0, 22)
+    bar.Position = UDim2.new(0, 6, 0.5, -11)
+    bar.BackgroundColor3 = currentTheme.ACCENT
+    bar.Visible = false
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+
+    local lbl = Instance.new("TextLabel", btn)
+    lbl.Size = UDim2.new(1, -20, 1, 0)
+    lbl.Position = UDim2.new(0, 16, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "♥  " .. labelText
+    lbl.TextColor3 = currentTheme.SUB_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    tabButtons[pageName] = {Button = btn, Bar = bar, Label = lbl}
+    table.insert(allTabButtons, {Button = btn, Bar = bar, Label = lbl})
+
+    btn.MouseButton1Click:Connect(function()
+        for pName, pFrame in pairs(pages) do
+            pFrame.Visible = (pName == pageName)
+        end
+        for pName, data in pairs(tabButtons) do
+            if pName == pageName then
+                data.Button.BackgroundTransparency = 0
+                data.Bar.Visible = true
+                data.Label.TextColor3 = currentTheme.SOFT_TEXT
+            else
+                data.Button.BackgroundTransparency = 1
+                data.Bar.Visible = false
+                data.Label.TextColor3 = currentTheme.SUB_TEXT
+            end
+        end
+    end)
+end
+
+-- Create Pages & Tabs
+local combatPage = createPage("combat", "combat", "aim & combat tools")
+local camlockPage = createPage("camlock", "camlock", "camera lock & tracking")
+local visualsPage = createPage("visuals", "visuals", "fog & screen customization")
+local movementPage = createPage("movement", "movement", "movement & tools")
+local whitelistPage = createPage("whitelist", "whitelist", "whitelisted friends & players")
+
+addTab("Combat", "combat", "combat")
+addTab("Camlock", "camlock", "camlock")
+addTab("Visuals", "visuals", "visuals")
+addTab("Movement", "movement", "movement")
+addTab("Whitelist", "whitelist", "whitelist")
+
+-- Component Builders
+local function createCard(parentPage, height)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -4, 0, height or 46)
+    card.BackgroundColor3 = currentTheme.CARD
+    card.BorderSizePixel = 0
+    card.ClipsDescendants = true
+    card.Parent = parentPage
+
+    local c = Instance.new("UICorner", card)
+    c.CornerRadius = UDim.new(0, 10)
+
+    local s = Instance.new("UIStroke", card)
+    s.Color = currentTheme.STROKE
+    s.Thickness = 1.2
+
+    table.insert(allCards, card)
+    return card
+end
+
+local function addToggle(parentPage, text, subtext, default, callback)
+    local card = createCard(parentPage, 46)
+
+    local lbl = Instance.new("TextLabel", card)
+    lbl.Size = UDim2.new(0.65, 0, 0, 20)
+    lbl.Position = UDim2.new(0, 12, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local sub = Instance.new("TextLabel", card)
+    sub.Size = UDim2.new(0.65, 0, 0, 16)
+    sub.Position = UDim2.new(0, 12, 0, 22)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtext or ""
+    sub.TextColor3 = currentTheme.SUB_TEXT
+    sub.Font = Enum.Font.GothamMedium
+    sub.TextSize = 10
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton", card)
+    btn.Size = UDim2.new(0, 44, 0, 22)
+    btn.Position = UDim2.new(1, -54, 0, 12)
+    btn.BackgroundColor3 = default and currentTheme.ACCENT or currentTheme.TOGGLE_OFF
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+
+    local circle = Instance.new("Frame", btn)
+    circle.Size = UDim2.new(0, 18, 0, 18)
+    circle.Position = default and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+
+    local state = default
+    local function setState(newState)
+        state = newState
+        btn.BackgroundColor3 = state and currentTheme.ACCENT or currentTheme.TOGGLE_OFF
+        circle:TweenPosition(
+            state and UDim2.new(1, -20, 0.5, -9) or UDim2.new(0, 2, 0.5, -9),
+            Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.12, true
+        )
+        callback(state)
+    end
+
+    btn.MouseButton1Click:Connect(function() setState(not state) end)
+    return {SetState = setState, GetState = function() return state end, Card = card, Text = text, Subtext = subtext}
+end
+
+local function addSlider(parentPage, text, min, max, default, callback)
+    local card = createCard(parentPage, 50)
+
+    local lbl = Instance.new("TextLabel", card)
+    lbl.Size = UDim2.new(0.65, 0, 0, 18)
+    lbl.Position = UDim2.new(0, 12, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local valLbl = Instance.new("TextLabel", card)
+    valLbl.Size = UDim2.new(0.25, 0, 0, 18)
+    valLbl.Position = UDim2.new(0, 12, 0, 18)
+    valLbl.BackgroundTransparency = 1
+    valLbl.Text = tostring(default)
+    valLbl.TextColor3 = currentTheme.ACCENT
+    valLbl.Font = Enum.Font.FredokaOne
+    valLbl.TextSize = 12
+    valLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("Frame", card)
+    bg.Size = UDim2.new(1, -24, 0, 6)
+    bg.Position = UDim2.new(0, 12, 0, 36)
+    bg.BackgroundColor3 = currentTheme.SLIDER_BG
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = currentTheme.ACCENT
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", bg)
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local sDragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        local val = math.floor(min + (max - min) * pos)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        knob.Position = UDim2.new(pos, 0, 0.5, 0)
+        valLbl.Text = tostring(val)
+        callback(val)
+    end
+
+    bg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sDragging = true
+            update(input)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = false end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if sDragging and input.UserInputType == Enum.UserInputType.MouseMovement then update(input) end
+    end)
+end
+
+local function addFloatSlider(parentPage, text, min, max, default, callback)
+    local card = createCard(parentPage, 50)
+
+    local lbl = Instance.new("TextLabel", card)
+    lbl.Size = UDim2.new(0.65, 0, 0, 18)
+    lbl.Position = UDim2.new(0, 12, 0, 4)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local valLbl = Instance.new("TextLabel", card)
+    valLbl.Size = UDim2.new(0.25, 0, 0, 18)
+    valLbl.Position = UDim2.new(0, 12, 0, 18)
+    valLbl.BackgroundTransparency = 1
+    valLbl.Text = string.format("%.2f", default)
+    valLbl.TextColor3 = currentTheme.ACCENT
+    valLbl.Font = Enum.Font.FredokaOne
+    valLbl.TextSize = 12
+    valLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("Frame", card)
+    bg.Size = UDim2.new(1, -24, 0, 6)
+    bg.Position = UDim2.new(0, 12, 0, 36)
+    bg.BackgroundColor3 = currentTheme.SLIDER_BG
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = currentTheme.ACCENT
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local knob = Instance.new("Frame", bg)
+    knob.Size = UDim2.new(0, 14, 0, 14)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0)
+    knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local sDragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        local val = min + (max - min) * pos
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        knob.Position = UDim2.new(pos, 0, 0.5, 0)
+        valLbl.Text = string.format("%.2f", val)
+        callback(val)
+    end
+
+    bg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            sDragging = true
+            update(input)
+        end
+    end)
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then sDragging = false end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if sDragging and input.UserInputType == Enum.UserInputType.MouseMovement then update(input) end
+    end)
+end
+
+local function addKeybindPicker(parentPage, text, currentKey, callback)
+    local card = createCard(parentPage, 46)
+
+    local lbl = Instance.new("TextLabel", card)
+    lbl.Size = UDim2.new(0.65, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local keyBtn = Instance.new("TextButton", card)
+    keyBtn.Size = UDim2.new(0, 60, 0, 26)
+    keyBtn.Position = UDim2.new(1, -70, 0.5, -13)
+    keyBtn.BackgroundColor3 = currentTheme.LIGHT_BTN
+    keyBtn.Text = currentKey.Name
+    keyBtn.TextColor3 = currentTheme.SOFT_TEXT
+    keyBtn.Font = Enum.Font.FredokaOne
+    keyBtn.TextSize = 12
+    keyBtn.AutoButtonColor = false
+    Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 6)
+
+    local listening = false
+    keyBtn.MouseButton1Click:Connect(function()
+        if listening then return end
+        listening = true
+        keyBtn.Text = "..."
+        keyBtn.BackgroundColor3 = currentTheme.ACCENT
+        keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+        local connection
+        connection = UIS.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                local newKey = input.KeyCode
+                keyBtn.Text = newKey.Name
+                keyBtn.BackgroundColor3 = currentTheme.LIGHT_BTN
+                keyBtn.TextColor3 = currentTheme.SOFT_TEXT
+                listening = false
+                callback(newKey)
+                connection:Disconnect()
+            end
+        end)
+    end)
+end
+
+local function addDropdown(parentPage, text, list, default, callback)
+    local card = createCard(parentPage, 46)
+
+    local topFrame = Instance.new("Frame", card)
+    topFrame.Size = UDim2.new(1, 0, 0, 46)
+    topFrame.BackgroundTransparency = 1
+
+    local lbl = Instance.new("TextLabel", topFrame)
+    lbl.Size = UDim2.new(0.42, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.FredokaOne
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton", topFrame)
+    btn.Size = UDim2.new(0.52, 0, 0, 26)
+    btn.Position = UDim2.new(0.44, 0, 0.5, -13)
+    btn.BackgroundColor3 = currentTheme.LIGHT_BTN
+    btn.Text = default
+    btn.TextColor3 = currentTheme.SOFT_TEXT
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 11
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local dropScroll = Instance.new("ScrollingFrame", card)
+    dropScroll.Name = "DropScroll"
+    dropScroll.Size = UDim2.new(1, -24, 0, 130)
+    dropScroll.Position = UDim2.new(0, 12, 0, 48)
+    dropScroll.BackgroundColor3 = currentTheme.SLIDER_BG
+    dropScroll.Visible = false
+    dropScroll.BorderSizePixel = 0
+    dropScroll.ScrollBarThickness = 3
+    dropScroll.ScrollBarImageColor3 = currentTheme.ACCENT
+    Instance.new("UICorner", dropScroll).CornerRadius = UDim.new(0, 6)
+
+    local dList = Instance.new("UIListLayout", dropScroll)
+    dList.SortOrder = Enum.SortOrder.LayoutOrder
+
+    dList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        dropScroll.CanvasSize = UDim2.new(0, 0, 0, dList.AbsoluteContentSize.Y)
+    end)
+
+    for _, v in ipairs(list) do
+        local item = Instance.new("TextButton", dropScroll)
+        item.Size = UDim2.new(1, 0, 0, 26)
+        item.BackgroundTransparency = 1
+        item.Text = v
+        item.TextColor3 = currentTheme.SOFT_TEXT
+        item.Font = Enum.Font.GothamMedium
+        item.TextSize = 11
+
+        item.MouseButton1Click:Connect(function()
+            btn.Text = v
+            dropScroll.Visible = false
+            card.Size = UDim2.new(1, -4, 0, 46)
+            callback(v)
+        end)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        local opened = not dropScroll.Visible
+        dropScroll.Visible = opened
+        if opened then
+            card.Size = UDim2.new(1, -4, 0, 186)
+        else
+            card.Size = UDim2.new(1, -4, 0, 46)
+        end
+    end)
+end
+
+local function addColorPicker(parentPage, titleText, currentColor, callback)
+    local card = createCard(parentPage, 115)
+
+    local title = Instance.new("TextLabel", card)
+    title.Size = UDim2.new(1, -20, 0, 22)
+    title.Position = UDim2.new(0, 12, 0, 4)
+    title.BackgroundTransparency = 1
+    title.Text = "♥ " .. titleText .. " ♡"
+    title.TextColor3 = currentTheme.SOFT_TEXT
+    title.Font = Enum.Font.FredokaOne
+    title.TextSize = 13
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    local colors = {
+        {"Red", Color3.fromRGB(255, 90, 110)},
+        {"Orange", Color3.fromRGB(255, 155, 70)},
+        {"Yellow", Color3.fromRGB(255, 225, 90)},
+        {"Lime", Color3.fromRGB(175, 235, 90)},
+        {"Green", Color3.fromRGB(95, 210, 125)},
+        {"Mint", Color3.fromRGB(110, 235, 195)},
+        {"Cyan", Color3.fromRGB(90, 220, 235)},
+        {"Sky", Color3.fromRGB(100, 175, 255)},
+        {"Blue", Color3.fromRGB(80, 120, 255)},
+        {"Navy", Color3.fromRGB(55, 65, 170)},
+        {"Purple", Color3.fromRGB(155, 100, 240)},
+        {"Violet", Color3.fromRGB(205, 100, 245)},
+        {"Pink", Color3.fromRGB(255, 105, 180)},
+        {"Rose", Color3.fromRGB(255, 125, 155)},
+        {"Peach", Color3.fromRGB(255, 175, 145)},
+        {"White", Color3.fromRGB(255, 255, 255)},
+        {"Gray", Color3.fromRGB(170, 175, 190)},
+        {"Black", Color3.fromRGB(35, 30, 45)}
+    }
+
+    local swatches = {}
+    local selectedIndex = 13
+
+    for i, data in ipairs(colors) do
+        local name, color = data[1], data[2]
+        local row = math.floor((i - 1) / 9)
+        local col = (i - 1) % 9
+
+        local btn = Instance.new("TextButton", card)
+        btn.Name = name .. "Swatch"
+        btn.Size = UDim2.new(0, 26, 0, 26)
+        btn.Position = UDim2.new(0, 12 + (col * 38), 0, 34 + (row * 34))
+        btn.BackgroundColor3 = color
+        btn.Text = ""
+        btn.AutoButtonColor = false
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+        local stroke = Instance.new("UIStroke", btn)
+        stroke.Color = currentTheme.STROKE
+        stroke.Thickness = 1
+        swatches[i] = stroke
+
+        if math.abs(currentColor.R - color.R) < 0.001
+            and math.abs(currentColor.G - color.G) < 0.001
+            and math.abs(currentColor.B - color.B) < 0.001 then
+            selectedIndex = i
+        end
+
+        btn.MouseButton1Click:Connect(function()
+            callback(color)
+            for j, s in ipairs(swatches) do
+                s.Color = (j == i) and Color3.fromRGB(255, 255, 255) or currentTheme.STROKE
+                s.Thickness = (j == i) and 2 or 1
+            end
+        end)
+    end
+
+    for i, s in ipairs(swatches) do
+        s.Color = (i == selectedIndex) and Color3.fromRGB(255, 255, 255) or currentTheme.STROKE
+        s.Thickness = (i == selectedIndex) and 2 or 1
+    end
+end
+
+-- COMBAT PAGE ITEMS
+addToggle(combatPage, "Silent Aim",
+    silentAimAllowed and "improves shot accuracy" or "disabled in this game",
+    cfg.silentAim,
+    function(v)
+        cfg.silentAim = silentAimAllowed and v or false
+    end)
+addSlider(combatPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
+addToggle(combatPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
+addColorPicker(combatPage, "FOV Color", cfg.silentAimFOVColor, function(c) cfg.silentAimFOVColor = c end)
+addDropdown(combatPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
+addToggle(combatPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
+addToggle(combatPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
+addToggle(combatPage, "Wall Check", "only aim in open space", cfg.silentAimWallCheck, function(v) cfg.silentAimWallCheck = v end)
+
+-- CAMLOCK PAGE ITEMS
+addToggle(camlockPage, "Camlock",
+    camlockAllowed and "sticky camera lock" or "disabled in this game",
+    cfg.camlockEnabled,
+    function(v)
+        cfg.camlockEnabled = camlockAllowed and v or false
+        if not cfg.camlockEnabled then cfg.camlockActive = false end
+    end)
+addFloatSlider(camlockPage, "Smoothness", 0.01, 1, cfg.camlockSmoothness, function(v) cfg.camlockSmoothness = v end)
+addKeybindPicker(camlockPage, "Keybind", cfg.camlockKey, function(k) cfg.camlockKey = k end)
+addDropdown(camlockPage, "Target Part", bodyPartsList, cfg.camlockPart, function(v) cfg.camlockPart = v end)
+
+-- VISUALS PAGE ITEMS
+addToggle(visualsPage, "Custom Fog",
+    fogAllowed and "enable fog modifications" or "disabled in this game",
+    cfg.fogEnabled,
+    function(v) cfg.fogEnabled = fogAllowed and v or false end)
+addSlider(visualsPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
+addSlider(visualsPage, "Fog End", 50, 1000, cfg.fogEnd, function(v) cfg.fogEnd = v end)
+addColorPicker(visualsPage, "Fog Color", cfg.fogColor, function(c) cfg.fogColor = c end)
+
+-- MOVEMENT PAGE ITEMS
+addToggle(movementPage, "Speed Hack",
+    movementAllowed and "faster walk speed | key: X" or "disabled in this game",
+    cfg.speedHackMaster,
+    function(v)
+        cfg.speedHackMaster = movementAllowed and v or false
+        cfg.speedBoostActive = cfg.speedHackMaster
+    end)
+addSlider(movementPage, "Speed Value", cfg.minSpeed, cfg.maxSpeed, cfg.speedValue, function(v) cfg.speedValue = v end)
+
+addToggle(movementPage, "Jump Power",
+    movementAllowed and "higher jumps | key: C" or "disabled in this game",
+    cfg.jumpPowerMaster,
+    function(v)
+        cfg.jumpPowerMaster = movementAllowed and v or false
+        cfg.jumpPowerActive = cfg.jumpPowerMaster
+    end)
+addSlider(movementPage, "Jump Value", cfg.minJump, cfg.maxJump, cfg.jumpValue, function(v) cfg.jumpValue = v end)
+
+-- WHITELIST PAGE ITEMS (WITH SEARCH BAR)
+local whitelistToggles = {}
+
+local searchCard = Instance.new("Frame", whitelistPage)
+searchCard.Size = UDim2.new(1, -4, 0, 42)
+searchCard.BackgroundColor3 = currentTheme.CARD
+searchCard.BorderSizePixel = 0
+searchCard.Parent = whitelistPage
+
+Instance.new("UICorner", searchCard).CornerRadius = UDim.new(0, 10)
+local searchStroke = Instance.new("UIStroke", searchCard)
+searchStroke.Color = currentTheme.STROKE
+searchStroke.Thickness = 1.2
+table.insert(allCards, searchCard)
+
+local searchBox = Instance.new("TextBox", searchCard)
+searchBox.Size = UDim2.new(1, -24, 1, 0)
+searchBox.Position = UDim2.new(0, 12, 0, 0)
+searchBox.BackgroundTransparency = 1
+searchBox.PlaceholderText = "♥ Search players..."
+searchBox.PlaceholderColor3 = currentTheme.SUB_TEXT
+searchBox.Text = ""
+searchBox.TextColor3 = currentTheme.SOFT_TEXT
+searchBox.Font = Enum.Font.GothamMedium
+searchBox.TextSize = 12
+searchBox.TextXAlignment = Enum.TextXAlignment.Left
+table.insert(allSearchBoxes, searchBox)
+
+local function filterWhitelist(query)
+    query = string.lower(query)
+    for _, item in ipairs(whitelistToggles) do
+        local matchName = string.find(string.lower(item.Text), query)
+        local matchSub = string.find(string.lower(item.Subtext), query)
+        if query == "" or matchName or matchSub then
+            item.Card.Visible = true
+        else
+            item.Card.Visible = false
+        end
+    end
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+    filterWhitelist(searchBox.Text)
+end)
+
+local function populateWhitelistPage()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= lp then
+            local toggleObj = addToggle(whitelistPage, p.DisplayName, "@" .. p.Name, cfg.whitelisted[p.UserId] or false, function(v)
+                cfg.whitelisted[p.UserId] = v
+            end)
+            table.insert(whitelistToggles, toggleObj)
+        end
+    end
+end
+populateWhitelistPage()
+
+Players.PlayerAdded:Connect(function(p)
+    if p ~= lp then
+        local toggleObj = addToggle(whitelistPage, p.DisplayName, "@" .. p.Name, false, function(v)
+            cfg.whitelisted[p.UserId] = v
+        end)
+        table.insert(whitelistToggles, toggleObj)
+        filterWhitelist(searchBox.Text)
+    end
+end)
+
+-- Default Open Combat Tab
+tabButtons["combat"].Button.BackgroundTransparency = 0
+tabButtons["combat"].Bar.Visible = true
+tabButtons["combat"].Label.TextColor3 = currentTheme.SOFT_TEXT
+pages["combat"].Visible = true
+
+-- Keybind Handling
+UIS.InputBegan:Connect(function(i, gpe)
+    if gpe then return end
+    
+    if camlockAllowed and cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
+        cfg.camlockActive = not cfg.camlockActive
+        if not cfg.camlockActive then
+            cfg.camlockTarget = nil
+        end
+    end
+    
+    if movementAllowed and i.KeyCode == cfg.speedKey and cfg.speedHackMaster then
+        cfg.speedBoostActive = not cfg.speedBoostActive
+    end
+
+    if movementAllowed and i.KeyCode == cfg.jumpKey and cfg.jumpPowerMaster then
+        cfg.jumpPowerActive = not cfg.jumpPowerActive
+    end
+    
+    if i.KeyCode == cfg.uiToggleKey then
+        ScreenGui.Enabled = not ScreenGui.Enabled
+    end
+end)
