@@ -51,11 +51,13 @@ local cfg = {
     fogStart = 0,
     fogEnd = 250,
     
-    speedEnabled = false, -- Set to false on startup[cite: 1]
+    speedEnabled = false,
+    speedAllowed = false,
     speedValue = 50,
     speedKey = Enum.KeyCode.X,
     
-    jumpEnabled = false, -- Set to false on startup[cite: 1]
+    jumpEnabled = false,
+    jumpAllowed = false,
     jumpValue = 50,
     jumpKey = Enum.KeyCode.C,
     
@@ -126,7 +128,8 @@ end
 local function getClosest()
     local mousePos = Vector2.new(mouse.X, mouse.Y)
     local best = nil
-    local bestDist = cfg.silentAimFOV
+    local bestDist = cfg.silentAimFOV -- Sets max radius to your FOV setting[cite: 1]
+    
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= lp and not isWhitelisted(v) and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
             local part
@@ -141,12 +144,20 @@ local function getClosest()
                 if onScreen then
                     local screenVec = Vector2.new(screenPos.X, screenPos.Y)
                     local dist = (screenVec - mousePos).Magnitude
+                    
+                    -- Strictly checks if this target is closer to the mouse than any previous target found within the FOV
                     if dist < bestDist then
                         if cfg.silentAimWallCheck then
                             local ray = Ray.new(cam.CFrame.Position, (part.Position - cam.CFrame.Position).Unit * 500)
                             local hit = workspace:FindPartOnRayWithIgnoreList(ray, {lp.Character, cam})
-                            if hit and hit:IsDescendantOf(v.Character) then bestDist = dist best = part end
-                        else bestDist = dist best = part end
+                            if hit and hit:IsDescendantOf(v.Character) then 
+                                bestDist = dist 
+                                best = part 
+                            end
+                        else 
+                            bestDist = dist 
+                            best = part 
+                        end
                     end
                 end
             end
@@ -819,9 +830,15 @@ addSlider(hitboxPage, "Hitbox Size", 2, 20, cfg.hitboxSize, function(v) cfg.hitb
 addFloatSlider(hitboxPage, "Transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
 addColorPicker(hitboxPage, "Hitbox Color Palette", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
 
-addToggle(visualsPage, "Speed Hack", "faster walk speed (Key: X)", cfg.speedEnabled, function(v) cfg.speedEnabled = v end)
+addToggle(visualsPage, "Speed Hack", "faster walk speed (Key: X)", false, function(v)
+    cfg.speedAllowed = v
+    cfg.speedEnabled = v
+end)
 addSlider(visualsPage, "Speed Value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
-addToggle(visualsPage, "Jump Power", "higher jump height (Key: C)", cfg.jumpEnabled, function(v) cfg.jumpEnabled = v end)
+addToggle(visualsPage, "Jump Power", "higher jump height (Key: C)", false, function(v)
+    cfg.jumpAllowed = v
+    cfg.jumpEnabled = v
+end)
 addSlider(visualsPage, "Jump Value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
 
 addToggle(fogPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
@@ -873,9 +890,9 @@ UIS.InputBegan:Connect(function(i, gpe)
     if cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
         cfg.camlockActive = not cfg.camlockActive
         if not cfg.camlockActive then cfg.camlockTarget = nil end
-    elseif i.KeyCode == cfg.speedKey then
+    elseif i.KeyCode == cfg.speedKey and cfg.speedAllowed then
         cfg.speedEnabled = not cfg.speedEnabled
-    elseif i.KeyCode == cfg.jumpKey then
+    elseif i.KeyCode == cfg.jumpKey and cfg.jumpAllowed then
         cfg.jumpEnabled = not cfg.jumpEnabled
     elseif i.KeyCode == cfg.uiToggleKey then
         ScreenGui.Enabled = not ScreenGui.Enabled
