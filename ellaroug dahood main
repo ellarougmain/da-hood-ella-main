@@ -51,11 +51,11 @@ local cfg = {
     fogStart = 0,
     fogEnd = 250,
     
-    speedEnabled = false,
+    speedEnabled = false, -- Set to false on startup[cite: 1]
     speedValue = 50,
     speedKey = Enum.KeyCode.X,
     
-    jumpEnabled = false,
+    jumpEnabled = false, -- Set to false on startup[cite: 1]
     jumpValue = 50,
     jumpKey = Enum.KeyCode.C,
     
