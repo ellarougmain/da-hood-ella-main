@@ -1,11 +1,12 @@
 --==================================================
--- ELLA MAIN DA HOOD - COMBO SCRIPT (RIGHT CONTROL HIDE ONLY)
+-- ELLA MAIN DA HOOD - CUTE PINK COMBO SCRIPT
 --==================================================
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local lp = Players.LocalPlayer
 while not lp do
@@ -17,29 +18,31 @@ local cam = workspace.CurrentCamera
 local mouse = lp:GetMouse()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "ella main Dahood",
-    Text = "All Bullets Locked Directly to Body <3",
+    Title = "<3 ella main Dahood <3",
+    Text = "Cute Pink Combo Script Loaded Successfully <3",
     Duration = 5
 })
-
-local handler = require(game:GetService("ReplicatedStorage").Modules.GunHandler)
-local oldFunc = handler.getAim
 
 -- Save Original Map Lighting Settings
 local originalFogStart = Lighting.FogStart
 local originalFogEnd = Lighting.FogEnd
 local originalFogColor = Lighting.FogColor
 
+-- Store Default Player Movement Values
+local defaultWalkSpeed = 16
+local defaultJumpPower = 50
+local defaultJumpHeight = 7.2
+
 local cfg = {
     silentAim = true,
-    silentAimKey = Enum.KeyCode.V,
-    uiToggleKey = Enum.KeyCode.RightControl,
-    silentAimHitChance = 100,
     silentAimFOV = 150,
     silentAimFOVShow = false,
-    silentAimFOVFilled = false,
-    silentAimFOVOpacity = 0.2,
-    silentAimFOVColor = Color3.fromRGB(255, 105, 180),
+    silentAimColor = Color3.fromRGB(255, 105, 180),
+    silentAimPart = "Head",
+    silentAimClosestPart = false,
+    silentAimWallCheck = false,
+    bypassRevolver = false,
+    uiToggleKey = Enum.KeyCode.RightControl,
     
     hitboxEnabled = false,
     hitboxSize = 4,
@@ -51,15 +54,15 @@ local cfg = {
     fogStart = 0,
     fogEnd = 250,
     
-    speedEnabled = false,
-    speedAllowed = false,
+    speedEnabled = false, -- Master UI Toggle
     speedValue = 50,
     speedKey = Enum.KeyCode.X,
+    speedKeyActive = true, -- Keybind state (active by default when master toggle is ON)
     
-    jumpEnabled = false,
-    jumpAllowed = false,
+    jumpEnabled = false, -- Master UI Toggle
     jumpValue = 50,
     jumpKey = Enum.KeyCode.C,
+    jumpKeyActive = true, -- Keybind state (active by default when master toggle is ON)
     
     camlockEnabled = false,
     camlockActive = false,
@@ -67,11 +70,6 @@ local cfg = {
     camlockKey = Enum.KeyCode.Q,
     camlockPart = "Head",
     camlockTarget = nil,
-    
-    silentAimPart = "Head",
-    silentAimClosestPart = false,
-    silentAimWallCheck = false,
-    bypassRevolver = false,
     
     whitelisted = {}
 }
@@ -128,8 +126,7 @@ end
 local function getClosest()
     local mousePos = Vector2.new(mouse.X, mouse.Y)
     local best = nil
-    local bestDist = cfg.silentAimFOV -- Sets max radius to your FOV setting[cite: 1]
-    
+    local bestDist = cfg.silentAimFOV
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= lp and not isWhitelisted(v) and v.Character and v.Character:FindFirstChild("Humanoid") and v.Character.Humanoid.Health > 0 then
             local part
@@ -144,20 +141,12 @@ local function getClosest()
                 if onScreen then
                     local screenVec = Vector2.new(screenPos.X, screenPos.Y)
                     local dist = (screenVec - mousePos).Magnitude
-                    
-                    -- Strictly checks if this target is closer to the mouse than any previous target found within the FOV
                     if dist < bestDist then
                         if cfg.silentAimWallCheck then
                             local ray = Ray.new(cam.CFrame.Position, (part.Position - cam.CFrame.Position).Unit * 500)
                             local hit = workspace:FindPartOnRayWithIgnoreList(ray, {lp.Character, cam})
-                            if hit and hit:IsDescendantOf(v.Character) then 
-                                bestDist = dist 
-                                best = part 
-                            end
-                        else 
-                            bestDist = dist 
-                            best = part 
-                        end
+                            if hit and hit:IsDescendantOf(v.Character) then bestDist = dist best = part end
+                        else bestDist = dist best = part end
                     end
                 end
             end
@@ -166,20 +155,32 @@ local function getClosest()
     return best
 end
 
-handler.getAim = function(origin, maxDist)
-    if not cfg.silentAim then return oldFunc(origin, maxDist) end
-    if cfg.bypassRevolver then
-        local currentTool = lp.Character and lp.Character:FindFirstChildOfClass("Tool")
-        if currentTool and (currentTool.Name == "[Revolver]" or currentTool.Name == "Revolver") then return oldFunc(origin, maxDist) end
+-- Handle GunHandler Hooking
+local handler, oldFunc = nil, nil
+pcall(function()
+    local modules = ReplicatedStorage:FindFirstChild("Modules")
+    if modules and modules:FindFirstChild("GunHandler") then
+        handler = require(modules.GunHandler)
+        if handler and handler.getAim then oldFunc = handler.getAim end
     end
-    
-    local target = getClosest()
-    if target then
-        local dir = (target.Position - origin).Unit
-        return dir, maxDist
+end)
+
+if handler and oldFunc then
+    handler.getAim = function(origin, maxDist)
+        if not cfg.silentAim then return oldFunc(origin, maxDist) end
+        if cfg.bypassRevolver then
+            local currentTool = lp.Character and lp.Character:FindFirstChildOfClass("Tool")
+            if currentTool and (currentTool.Name == "[Revolver]" or currentTool.Name == "Revolver") then return oldFunc(origin, maxDist) end
+        end
+        
+        local target = getClosest()
+        if target then
+            local dir = (target.Position - origin).Unit
+            return dir, maxDist
+        end
+        
+        return oldFunc(origin, maxDist)
     end
-    
-    return oldFunc(origin, maxDist)
 end
 
 -- Cleanup existing UI
@@ -209,11 +210,12 @@ RunService.RenderStepped:Connect(function()
         fovCircle.Visible = true
         fovCircle.Radius = cfg.silentAimFOV
         fovCircle.Position = Vector2.new(mouse.X, mouse.Y + 36)
-        fovCircle.Color = cfg.silentAimFOVColor
+        fovCircle.Color = cfg.silentAimColor
     else
         fovCircle.Visible = false
     end
 
+    -- Hitbox Logic
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = v.Character.HumanoidRootPart
@@ -226,6 +228,7 @@ RunService.RenderStepped:Connect(function()
             else
                 hrp.Size = Vector3.new(2, 2, 1)
                 hrp.Transparency = 1
+                hrp.Material = Enum.Material.Plastic
                 hrp.CanCollide = true
             end
         end
@@ -234,13 +237,23 @@ RunService.RenderStepped:Connect(function()
     local char = lp.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if hum then
-        if cfg.speedEnabled then
+        -- Speed Control Logic: Only active if UI toggle is ON AND Keybind toggle is ON
+        if cfg.speedEnabled and cfg.speedKeyActive then
             hum.WalkSpeed = cfg.speedValue
+        else
+            hum.WalkSpeed = defaultWalkSpeed
         end
-        if cfg.jumpEnabled then
+
+        -- Jump Control Logic: Only active if UI toggle is ON AND Keybind toggle is ON
+        if cfg.jumpEnabled and cfg.jumpKeyActive then
             hum.JumpPower = cfg.jumpValue
             if hum.UseJumpPower == false then
                 pcall(function() hum.JumpHeight = cfg.jumpValue / 7.2 end)
+            end
+        else
+            hum.JumpPower = defaultJumpPower
+            if hum.UseJumpPower == false then
+                pcall(function() hum.JumpHeight = defaultJumpHeight end)
             end
         end
     end
@@ -464,14 +477,14 @@ local function addTab(labelText, pageName)
     end)
 end
 
-local combatPage = createPage("combat", "combat", "aim & combat tools")
+local silentAimPage = createPage("silentAim", "silent aim", "aim accuracy tools")
 local camlockPage = createPage("camlock", "camlock", "camera lock & tracking")
 local hitboxPage = createPage("hitbox", "hitbox", "player hitbox expander")
 local visualsPage = createPage("visuals", "visuals", "speed & jump movement")
 local fogPage = createPage("fog", "fog", "atmosphere & world fog settings")
 local whitelistPage = createPage("whitelist", "whitelist", "whitelisted friends & players")
 
-addTab("Combat", "combat")
+addTab("Silent Aim", "silentAim")
 addTab("Camlock", "camlock")
 addTab("Hitbox", "hitbox")
 addTab("Movement", "visuals")
@@ -531,16 +544,20 @@ local function addToggle(parentPage, text, subtext, default, callback)
     Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
 
     local state = default
-    btn.MouseButton1Click:Connect(function()
-        state = not state
+    local function setToggleState(newState)
+        state = newState
         btn.BackgroundColor3 = state and currentTheme.ACCENT or currentTheme.TOGGLE_OFF
         circle:TweenPosition(
             state and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7),
             Enum.EasingDirection.Out, Enum.EasingStyle.Quad, 0.1, true
         )
         callback(state)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        setToggleState(not state)
     end)
-    return {Card = card, Text = text, Subtext = subtext}
+    return setToggleState
 end
 
 local function addSlider(parentPage, text, min, max, default, callback)
@@ -808,14 +825,14 @@ local function addColorPicker(parentPage, titleText, currentColor, callback)
     end
 end
 
-addToggle(combatPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
-addSlider(combatPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
-addToggle(combatPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
-addColorPicker(combatPage, "FOV Color Palette", cfg.silentAimFOVColor, function(c) cfg.silentAimFOVColor = c end)
-addDropdown(combatPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
-addToggle(combatPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
-addToggle(combatPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
-addToggle(combatPage, "Wall Check", "only aim in open space", cfg.silentAimWallCheck, function(v) cfg.silentAimWallCheck = v end)
+addToggle(silentAimPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
+addSlider(silentAimPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
+addToggle(silentAimPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
+addColorPicker(silentAimPage, "FOV Color Palette", cfg.silentAimColor, function(c) cfg.silentAimColor = c end)
+addDropdown(silentAimPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
+addToggle(silentAimPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
+addToggle(silentAimPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
+addToggle(silentAimPage, "Wall Check", "only aim in open space", cfg.silentAimWallCheck, function(v) cfg.silentAimWallCheck = v end)
 
 addToggle(camlockPage, "Camlock", "sticky camera lock", cfg.camlockEnabled, function(v)
     cfg.camlockEnabled = v
@@ -830,16 +847,20 @@ addSlider(hitboxPage, "Hitbox Size", 2, 20, cfg.hitboxSize, function(v) cfg.hitb
 addFloatSlider(hitboxPage, "Transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
 addColorPicker(hitboxPage, "Hitbox Color Palette", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
 
-addToggle(visualsPage, "Speed Hack", "faster walk speed (Key: X)", false, function(v)
-    cfg.speedAllowed = v
+-- Movement Toggles
+addToggle(visualsPage, "Speed Hack", "faster walk speed", cfg.speedEnabled, function(v)
     cfg.speedEnabled = v
+    cfg.speedKeyActive = v
 end)
 addSlider(visualsPage, "Speed Value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
-addToggle(visualsPage, "Jump Power", "higher jump height (Key: C)", false, function(v)
-    cfg.jumpAllowed = v
+addKeybindPicker(visualsPage, "Speed Keybind", cfg.speedKey, function(k) cfg.speedKey = k end)
+
+addToggle(visualsPage, "Jump Power", "higher jump height", cfg.jumpEnabled, function(v)
     cfg.jumpEnabled = v
+    cfg.jumpKeyActive = v
 end)
 addSlider(visualsPage, "Jump Value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
+addKeybindPicker(visualsPage, "Jump Keybind", cfg.jumpKey, function(k) cfg.jumpKey = k end)
 
 addToggle(fogPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
 addSlider(fogPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
@@ -880,20 +901,24 @@ Players.PlayerRemoving:Connect(function()
     rebuildWhitelistUI()
 end)
 
-tabButtons["combat"].Button.BackgroundTransparency = 0
-tabButtons["combat"].Bar.Visible = true
-tabButtons["combat"].Label.TextColor3 = currentTheme.SOFT_TEXT
-pages["combat"].Visible = true
+tabButtons["silentAim"].Button.BackgroundTransparency = 0
+tabButtons["silentAim"].Bar.Visible = true
+tabButtons["silentAim"].Label.TextColor3 = currentTheme.SOFT_TEXT
+pages["silentAim"].Visible = true
 
 UIS.InputBegan:Connect(function(i, gpe)
     if gpe then return end
     if cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
         cfg.camlockActive = not cfg.camlockActive
         if not cfg.camlockActive then cfg.camlockTarget = nil end
-    elseif i.KeyCode == cfg.speedKey and cfg.speedAllowed then
-        cfg.speedEnabled = not cfg.speedEnabled
-    elseif i.KeyCode == cfg.jumpKey and cfg.jumpAllowed then
-        cfg.jumpEnabled = not cfg.jumpEnabled
+    elseif i.KeyCode == cfg.speedKey then
+        if cfg.speedEnabled then
+            cfg.speedKeyActive = not cfg.speedKeyActive
+        end
+    elseif i.KeyCode == cfg.jumpKey then
+        if cfg.jumpEnabled then
+            cfg.jumpKeyActive = not cfg.jumpKeyActive
+        end
     elseif i.KeyCode == cfg.uiToggleKey then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
