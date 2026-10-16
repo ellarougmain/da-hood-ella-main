@@ -1,5 +1,5 @@
 --==================================================
--- ELLA MAIN DA HOOD - CUTE PINK COMBO SCRIPT
+-- ELLA MAIN DA HOOD - CUTE PINK COMBO SCRIPT (FIXED)
 --==================================================
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -57,12 +57,12 @@ local cfg = {
     speedEnabled = false, -- Master UI Toggle
     speedValue = 50,
     speedKey = Enum.KeyCode.X,
-    speedKeyActive = true, -- Keybind state (active by default when master toggle is ON)
+    speedKeyActive = true,
     
     jumpEnabled = false, -- Master UI Toggle
     jumpValue = 50,
     jumpKey = Enum.KeyCode.C,
-    jumpKeyActive = true, -- Keybind state (active by default when master toggle is ON)
+    jumpKeyActive = true,
     
     camlockEnabled = false,
     camlockActive = false,
@@ -237,23 +237,16 @@ RunService.RenderStepped:Connect(function()
     local char = lp.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if hum then
-        -- Speed Control Logic: Only active if UI toggle is ON AND Keybind toggle is ON
+        -- Speed Control Logic
         if cfg.speedEnabled and cfg.speedKeyActive then
             hum.WalkSpeed = cfg.speedValue
-        else
-            hum.WalkSpeed = defaultWalkSpeed
         end
 
-        -- Jump Control Logic: Only active if UI toggle is ON AND Keybind toggle is ON
+        -- Jump Control Logic
         if cfg.jumpEnabled and cfg.jumpKeyActive then
             hum.JumpPower = cfg.jumpValue
             if hum.UseJumpPower == false then
                 pcall(function() hum.JumpHeight = cfg.jumpValue / 7.2 end)
-            end
-        else
-            hum.JumpPower = defaultJumpPower
-            if hum.UseJumpPower == false then
-                pcall(function() hum.JumpHeight = defaultJumpHeight end)
             end
         end
     end
@@ -850,14 +843,14 @@ addColorPicker(hitboxPage, "Hitbox Color Palette", cfg.hitboxColor, function(c) 
 -- Movement Toggles
 addToggle(visualsPage, "Speed Hack", "faster walk speed", cfg.speedEnabled, function(v)
     cfg.speedEnabled = v
-    cfg.speedKeyActive = v
+    cfg.speedKeyActive = true
 end)
 addSlider(visualsPage, "Speed Value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
 addKeybindPicker(visualsPage, "Speed Keybind", cfg.speedKey, function(k) cfg.speedKey = k end)
 
 addToggle(visualsPage, "Jump Power", "higher jump height", cfg.jumpEnabled, function(v)
     cfg.jumpEnabled = v
-    cfg.jumpKeyActive = v
+    cfg.jumpKeyActive = true
 end)
 addSlider(visualsPage, "Jump Value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
 addKeybindPicker(visualsPage, "Jump Keybind", cfg.jumpKey, function(k) cfg.jumpKey = k end)
@@ -911,14 +904,6 @@ UIS.InputBegan:Connect(function(i, gpe)
     if cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
         cfg.camlockActive = not cfg.camlockActive
         if not cfg.camlockActive then cfg.camlockTarget = nil end
-    elseif i.KeyCode == cfg.speedKey then
-        if cfg.speedEnabled then
-            cfg.speedKeyActive = not cfg.speedKeyActive
-        end
-    elseif i.KeyCode == cfg.jumpKey then
-        if cfg.jumpEnabled then
-            cfg.jumpKeyActive = not cfg.jumpKeyActive
-        end
     elseif i.KeyCode == cfg.uiToggleKey then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
