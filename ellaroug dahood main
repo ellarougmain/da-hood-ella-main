@@ -1,10 +1,75 @@
 --==================================================
--- ELLA MAIN DA HOOD - CUTE PINK COMBO SCRIPT (FIXED)
+-- ELLA MAIN DA HOOD - CUTE PROFILE & UI CUSTOMIZER
 --==================================================
+local userInputKey = "love_ella"
+
+-- Key System Prompt UI
+local CoreGui = game:GetService("CoreGui")
+if CoreGui:FindFirstChild("EllarougKeyUI") then CoreGui.EllarougKeyUI:Destroy() end
+
+local KeyGui = Instance.new("ScreenGui")
+KeyGui.Name = "EllarougKeyUI"
+KeyGui.Parent = CoreGui
+
+local KeyFrame = Instance.new("Frame", KeyGui)
+KeyFrame.Size = UDim2.new(0, 320, 0, 160)
+KeyFrame.Position = UDim2.new(0.5, -160, 0.5, -80)
+KeyFrame.BackgroundColor3 = Color3.fromRGB(245, 242, 235)
+KeyFrame.BorderSizePixel = 0
+Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
+local KeyStroke = Instance.new("UIStroke", KeyFrame)
+KeyStroke.Color = Color3.fromRGB(185, 164, 147)
+KeyStroke.Thickness = 2
+
+local KeyTitle = Instance.new("TextLabel", KeyFrame)
+KeyTitle.Size = UDim2.new(1, 0, 0, 35)
+KeyTitle.Position = UDim2.new(0, 0, 0, 10)
+KeyTitle.BackgroundTransparency = 1
+KeyTitle.Text = "♡ enter key to access ♡"
+KeyTitle.TextColor3 = Color3.fromRGB(75, 65, 55)
+KeyTitle.Font = Enum.Font.SourceSansBold
+KeyTitle.TextSize = 15
+
+local KeyBox = Instance.new("TextBox", KeyFrame)
+KeyBox.Size = UDim2.new(0.8, 0, 0, 32)
+KeyBox.Position = UDim2.new(0.1, 0, 0, 55)
+KeyBox.BackgroundColor3 = Color3.fromRGB(250, 248, 243)
+KeyBox.PlaceholderText = "type key here..."
+KeyBox.Text = ""
+KeyBox.TextColor3 = Color3.fromRGB(75, 65, 55)
+KeyBox.Font = Enum.Font.GothamBold
+KeyBox.TextSize = 12
+Instance.new("UICorner", KeyBox).CornerRadius = UDim.new(0, 8)
+local BoxStroke = Instance.new("UIStroke", KeyBox)
+BoxStroke.Color = Color3.fromRGB(205, 194, 182)
+
+local SubmitBtn = Instance.new("TextButton", KeyFrame)
+SubmitBtn.Size = UDim2.new(0.5, 0, 0, 30)
+SubmitBtn.Position = UDim2.new(0.25, 0, 0, 105)
+SubmitBtn.BackgroundColor3 = Color3.fromRGB(185, 164, 147)
+SubmitBtn.Text = "submit ♡"
+SubmitBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SubmitBtn.Font = Enum.Font.SourceSansBold
+SubmitBtn.TextSize = 13
+Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
+
+local keyUnlocked = false
+SubmitBtn.MouseButton1Click:Connect(function()
+    if KeyBox.Text == userInputKey then
+        keyUnlocked = true
+        KeyGui:Destroy()
+    else
+        KeyBox.Text = ""
+        KeyBox.PlaceholderText = "wrong key! try again ♡"
+    end
+end)
+
+repeat task.wait() until keyUnlocked
+
+-- Main Script Execution & Setup
 local UIS = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local CoreGui = game:GetService("CoreGui")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -18,20 +83,17 @@ local cam = workspace.CurrentCamera
 local mouse = lp:GetMouse()
 
 game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "<3 ella main Dahood <3",
-    Text = "Cute Pink Combo Script Loaded Successfully <3",
+    Title = "♡ ella main dahood ♡",
+    Text = "bunny latte script loaded successfully ♡",
     Duration = 5
 })
 
--- Save Original Map Lighting Settings
 local originalFogStart = Lighting.FogStart
 local originalFogEnd = Lighting.FogEnd
 local originalFogColor = Lighting.FogColor
 
--- Store Default Player Movement Values
 local defaultWalkSpeed = 16
 local defaultJumpPower = 50
-local defaultJumpHeight = 7.2
 
 local cfg = {
     silentAim = true,
@@ -54,15 +116,15 @@ local cfg = {
     fogStart = 0,
     fogEnd = 250,
     
-    speedEnabled = false, -- Master UI Toggle
+    speedEnabled = false,
     speedValue = 50,
     speedKey = Enum.KeyCode.X,
-    speedKeyActive = true,
+    speedActive = false,
     
-    jumpEnabled = false, -- Master UI Toggle
+    jumpEnabled = false,
     jumpValue = 50,
     jumpKey = Enum.KeyCode.C,
-    jumpKeyActive = true,
+    jumpActive = false,
     
     camlockEnabled = false,
     camlockActive = false,
@@ -155,7 +217,6 @@ local function getClosest()
     return best
 end
 
--- Handle GunHandler Hooking
 local handler, oldFunc = nil, nil
 pcall(function()
     local modules = ReplicatedStorage:FindFirstChild("Modules")
@@ -172,24 +233,16 @@ if handler and oldFunc then
             local currentTool = lp.Character and lp.Character:FindFirstChildOfClass("Tool")
             if currentTool and (currentTool.Name == "[Revolver]" or currentTool.Name == "Revolver") then return oldFunc(origin, maxDist) end
         end
-        
         local target = getClosest()
         if target then
             local dir = (target.Position - origin).Unit
             return dir, maxDist
         end
-        
         return oldFunc(origin, maxDist)
     end
 end
 
--- Cleanup existing UI
-if CoreGui:FindFirstChild("EllarougHoodCustomUI") then
-    CoreGui.EllarougHoodCustomUI:Destroy()
-end
-if lp:FindFirstChild("PlayerGui") and lp.PlayerGui:FindFirstChild("EllarougHoodCustomUI") then
-    lp.PlayerGui.EllarougHoodCustomUI:Destroy()
-end
+if CoreGui:FindFirstChild("EllarougHoodCustomUI") then CoreGui.EllarougHoodCustomUI:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "EllarougHoodCustomUI"
@@ -215,7 +268,6 @@ RunService.RenderStepped:Connect(function()
         fovCircle.Visible = false
     end
 
-    -- Hitbox Logic
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= lp and v.Character and v.Character:FindFirstChild("HumanoidRootPart") then
             local hrp = v.Character.HumanoidRootPart
@@ -237,17 +289,19 @@ RunService.RenderStepped:Connect(function()
     local char = lp.Character
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if hum then
-        -- Speed Control Logic
-        if cfg.speedEnabled and cfg.speedKeyActive then
+        if cfg.speedEnabled and cfg.speedActive then
             hum.WalkSpeed = cfg.speedValue
+        else
+            hum.WalkSpeed = defaultWalkSpeed
         end
 
-        -- Jump Control Logic
-        if cfg.jumpEnabled and cfg.jumpKeyActive then
+        if cfg.jumpEnabled and cfg.jumpActive then
             hum.JumpPower = cfg.jumpValue
             if hum.UseJumpPower == false then
                 pcall(function() hum.JumpHeight = cfg.jumpValue / 7.2 end)
             end
+        else
+            hum.JumpPower = defaultJumpPower
         end
     end
 
@@ -255,7 +309,6 @@ RunService.RenderStepped:Connect(function()
         if not cfg.camlockTarget or not cfg.camlockTarget.Character or not cfg.camlockTarget.Character:FindFirstChild("Humanoid") or cfg.camlockTarget.Character.Humanoid.Health <= 0 then
             cfg.camlockTarget = getClosestPlayer()
         end
-
         if cfg.camlockTarget and cfg.camlockTarget.Character and not isWhitelisted(cfg.camlockTarget) then
             local part = cfg.camlockTarget.Character:FindFirstChild(cfg.camlockPart) or cfg.camlockTarget.Character:FindFirstChild("Head")
             if part then
@@ -278,70 +331,105 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-local pinkColor = Color3.fromRGB(255, 105, 180)
-local subPinkColor = Color3.fromRGB(255, 145, 205)
-
+-- Theme Palette State
 local currentTheme = {
-    ACCENT = pinkColor,
-    BG = Color3.fromRGB(0, 0, 0),
-    CARD_BG = Color3.fromRGB(10, 10, 10),
-    CARD = Color3.fromRGB(18, 18, 18),
-    SOFT_TEXT = pinkColor,
-    SUB_TEXT = subPinkColor,
-    LIGHT_BTN = Color3.fromRGB(30, 20, 25),
-    TOGGLE_OFF = Color3.fromRGB(45, 25, 35),
-    STROKE = Color3.fromRGB(80, 30, 60),
-    SLIDER_BG = Color3.fromRGB(30, 20, 25)
+    ACCENT = Color3.fromRGB(185, 164, 147),
+    BG = Color3.fromRGB(245, 242, 235),
+    CARD_BG = Color3.fromRGB(250, 248, 243),
+    CARD = Color3.fromRGB(238, 234, 226),
+    SOFT_TEXT = Color3.fromRGB(75, 65, 55),
+    SUB_TEXT = Color3.fromRGB(135, 118, 104),
+    LIGHT_BTN = Color3.fromRGB(230, 224, 215),
+    TOGGLE_OFF = Color3.fromRGB(215, 208, 198),
+    STROKE = Color3.fromRGB(205, 194, 182),
+    SLIDER_BG = Color3.fromRGB(230, 224, 215)
 }
 
 local Main = Instance.new("Frame", ScreenGui)
 Main.Name = "Main"
 Main.ClipsDescendants = true
-Main.Size = UDim2.new(0, 520, 0, 400)
-Main.Position = UDim2.new(0.5, -260, 0.5, -200)
+Main.Size = UDim2.new(0, 560, 0, 480)
+Main.Position = UDim2.new(0.5, -280, 0.5, -240)
 Main.BackgroundColor3 = currentTheme.BG
 Main.BorderSizePixel = 0
 Main.Active = true
 
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
 local MainStroke = Instance.new("UIStroke", Main)
 MainStroke.Color = currentTheme.ACCENT
 MainStroke.Thickness = 2
 
+-- Real Roblox Profile Avatar Thumbnail Frame on the Left
+local AvatarHolder = Instance.new("Frame", Main)
+AvatarHolder.Size = UDim2.new(0, 38, 0, 38)
+AvatarHolder.Position = UDim2.new(0, 8, 0, 4)
+AvatarHolder.BackgroundColor3 = currentTheme.CARD
+AvatarHolder.BorderSizePixel = 0
+Instance.new("UICorner", AvatarHolder).CornerRadius = UDim.new(0, 8)
+local AvatarStroke = Instance.new("UIStroke", AvatarHolder)
+AvatarStroke.Color = currentTheme.STROKE
+AvatarStroke.Thickness = 1
+
+local AvatarImg = Instance.new("ImageLabel", AvatarHolder)
+AvatarImg.Size = UDim2.new(1, 0, 1, 0)
+AvatarImg.BackgroundTransparency = 1
+Instance.new("UICorner", AvatarImg).CornerRadius = UDim.new(0, 8)
+
+task.spawn(function()
+    pcall(function()
+        local content = Players:GetUserThumbnailAsync(lp.UserId, Enum.ThumbnailType.AvatarBust, Enum.ThumbnailSize.Size420x420)
+        AvatarImg.Image = content
+    end)
+end)
+
 local Header = Instance.new("Frame", Main)
 Header.Name = "Header"
-Header.Size = UDim2.new(1, 0, 0, 38)
+Header.Size = UDim2.new(1, -60, 0, 45)
+Header.Position = UDim2.new(0, 52, 0, 0)
 Header.BackgroundTransparency = 1
 
 local Title = Instance.new("TextLabel", Header)
-Title.Size = UDim2.new(1, -20, 0, 16)
-Title.Position = UDim2.new(0, 12, 0, 3)
+Title.Size = UDim2.new(1, 0, 0, 18)
+Title.Position = UDim2.new(0, 5, 0, 4)
 Title.BackgroundTransparency = 1
-Title.Text = "<3 ella main Dahood <3"
+Title.Text = "♡ ella main dahood ♡"
 Title.TextColor3 = currentTheme.SOFT_TEXT
-Title.TextSize = 11
-Title.Font = Enum.Font.FredokaOne
+Title.TextSize = 12
+Title.Font = Enum.Font.SourceSansBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local UserSubTitle = Instance.new("TextLabel", Header)
-UserSubTitle.Size = UDim2.new(1, -20, 0, 14)
-UserSubTitle.Position = UDim2.new(0, 12, 0, 20)
+UserSubTitle.Size = UDim2.new(1, 0, 0, 15)
+UserSubTitle.Position = UDim2.new(0, 5, 0, 22)
 UserSubTitle.BackgroundTransparency = 1
-UserSubTitle.Text = lp.DisplayName .. " - @" .. lp.Name
+UserSubTitle.Text = lp.DisplayName .. " - id: " .. lp.UserId
 UserSubTitle.TextColor3 = currentTheme.SUB_TEXT
 UserSubTitle.TextSize = 10
-UserSubTitle.Font = Enum.Font.GothamMedium
+UserSubTitle.Font = Enum.Font.GothamBold
 UserSubTitle.TextXAlignment = Enum.TextXAlignment.Left
 
+local TabBar = Instance.new("ScrollingFrame", Main)
+TabBar.Size = UDim2.new(1, -16, 0, 30)
+TabBar.Position = UDim2.new(0, 8, 0, 48)
+TabBar.BackgroundTransparency = 1
+TabBar.BorderSizePixel = 0
+TabBar.CanvasSize = UDim2.new(0, 420, 0, 0)
+TabBar.ScrollBarThickness = 0
+
+local TabListLayout = Instance.new("UIListLayout", TabBar)
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+TabListLayout.Padding = UDim.new(0, 4)
+
 local dragging, dragStart, startPos
-Header.InputBegan:Connect(function(input)
+Main.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
         startPos = Main.Position
     end
 end)
-Header.InputEnded:Connect(function(input)
+Main.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = false
     end
@@ -356,25 +444,12 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0, 135, 1, -38)
-Sidebar.Position = UDim2.new(0, 0, 0, 38)
-Sidebar.BackgroundTransparency = 1
-
-local SideList = Instance.new("UIListLayout", Sidebar)
-SideList.SortOrder = Enum.SortOrder.LayoutOrder
-SideList.Padding = UDim.new(0, 6)
-
-local SidePadding = Instance.new("UIPadding", Sidebar)
-SidePadding.PaddingLeft = UDim.new(0, 8)
-SidePadding.PaddingRight = UDim.new(0, 6)
-
 local Content = Instance.new("Frame", Main)
-Content.Size = UDim2.new(1, -143, 1, -44)
-Content.Position = UDim2.new(0, 135, 0, 38)
+Content.Size = UDim2.new(1, -16, 1, -92)
+Content.Position = UDim2.new(0, 8, 0, 84)
 Content.BackgroundColor3 = currentTheme.CARD_BG
 Content.BorderSizePixel = 0
-Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", Content).CornerRadius = UDim.new(0, 10)
 
 local pages = {}
 local tabButtons = {}
@@ -402,22 +477,24 @@ local function createPage(pageName, titleText, descText)
     headerFrame.BackgroundTransparency = 1
 
     local pTitle = Instance.new("TextLabel", headerFrame)
+    pTitle.Name = "PageTitle"
     pTitle.Size = UDim2.new(1, 0, 0, 18)
     pTitle.BackgroundTransparency = 1
-    pTitle.Text = "<3 " .. titleText .. " <3"
+    pTitle.Text = "♡ " .. titleText .. " ♡"
     pTitle.TextColor3 = currentTheme.SOFT_TEXT
-    pTitle.Font = Enum.Font.FredokaOne
-    pTitle.TextSize = 13
+    pTitle.Font = Enum.Font.SourceSansBold
+    pTitle.TextSize = 14
     pTitle.TextXAlignment = Enum.TextXAlignment.Left
 
     local pDesc = Instance.new("TextLabel", headerFrame)
+    pDesc.Name = "PageDesc"
     pDesc.Size = UDim2.new(1, 0, 0, 14)
     pDesc.Position = UDim2.new(0, 0, 0, 18)
     pDesc.BackgroundTransparency = 1
     pDesc.Text = descText or ""
     pDesc.TextColor3 = currentTheme.SUB_TEXT
-    pDesc.Font = Enum.Font.GothamMedium
-    pDesc.TextSize = 9
+    pDesc.Font = Enum.Font.GothamBold
+    pDesc.TextSize = 10
     pDesc.TextXAlignment = Enum.TextXAlignment.Left
 
     pages[pageName] = pageScroll
@@ -425,32 +502,24 @@ local function createPage(pageName, titleText, descText)
 end
 
 local function addTab(labelText, pageName)
-    local btn = Instance.new("TextButton", Sidebar)
-    btn.Size = UDim2.new(1, 0, 0, 32)
+    local btn = Instance.new("TextButton", TabBar)
+    btn.Size = UDim2.new(0, 55, 0, 28)
     btn.BackgroundColor3 = currentTheme.LIGHT_BTN
     btn.BackgroundTransparency = 1
     btn.Text = ""
     btn.AutoButtonColor = false
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
-    local bar = Instance.new("Frame", btn)
-    bar.Size = UDim2.new(0, 3, 0, 16)
-    bar.Position = UDim2.new(0, 4, 0.5, -8)
-    bar.BackgroundColor3 = currentTheme.ACCENT
-    bar.Visible = false
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-
     local lbl = Instance.new("TextLabel", btn)
-    lbl.Size = UDim2.new(1, -14, 1, 0)
-    lbl.Position = UDim2.new(0, 12, 0, 0)
+    lbl.Size = UDim2.new(1, 0, 1, 0)
     lbl.BackgroundTransparency = 1
-    lbl.Text = "<3  " .. labelText
+    lbl.Text = labelText
     lbl.TextColor3 = currentTheme.SUB_TEXT
-    lbl.Font = Enum.Font.FredokaOne
+    lbl.Font = Enum.Font.SourceSansBold
     lbl.TextSize = 11
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextXAlignment = Enum.TextXAlignment.Center
 
-    tabButtons[pageName] = {Button = btn, Bar = bar, Label = lbl}
+    tabButtons[pageName] = {Button = btn, Label = lbl}
 
     btn.MouseButton1Click:Connect(function()
         for pName, pFrame in pairs(pages) do
@@ -459,11 +528,9 @@ local function addTab(labelText, pageName)
         for pName, data in pairs(tabButtons) do
             if pName == pageName then
                 data.Button.BackgroundTransparency = 0
-                data.Bar.Visible = true
                 data.Label.TextColor3 = currentTheme.SOFT_TEXT
             else
                 data.Button.BackgroundTransparency = 1
-                data.Bar.Visible = false
                 data.Label.TextColor3 = currentTheme.SUB_TEXT
             end
         end
@@ -476,15 +543,16 @@ local hitboxPage = createPage("hitbox", "hitbox", "player hitbox expander")
 local visualsPage = createPage("visuals", "visuals", "speed & jump movement")
 local fogPage = createPage("fog", "fog", "atmosphere & world fog settings")
 local whitelistPage = createPage("whitelist", "whitelist", "whitelisted friends & players")
+local themePage = createPage("theme", "ui customizer", "personalize your colors & theme")
 
-addTab("Silent Aim", "silentAim")
-addTab("Camlock", "camlock")
-addTab("Hitbox", "hitbox")
-addTab("Movement", "visuals")
-addTab("Fog", "fog")
-addTab("Whitelist", "whitelist")
+addTab("aim", "silentAim")
+addTab("cam", "camlock")
+addTab("hit", "hitbox")
+addTab("move", "visuals")
+addTab("fog", "fog")
+addTab("list", "whitelist")
+addTab("theme", "theme")
 
-local allCards = {}
 local function createCard(parentPage, height)
     local card = Instance.new("Frame", parentPage)
     card.Size = UDim2.new(1, -4, 0, height or 36)
@@ -493,36 +561,38 @@ local function createCard(parentPage, height)
     card.ClipsDescendants = true
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
     local s = Instance.new("UIStroke", card)
+    s.Name = "CardStroke"
     s.Color = currentTheme.STROKE
     s.Thickness = 1
-    table.insert(allCards, card)
     return card
 end
 
 local function addToggle(parentPage, text, subtext, default, callback)
     local card = createCard(parentPage, 36)
-
     local lbl = Instance.new("TextLabel", card)
+    lbl.Name = "CardLabel"
     lbl.Size = UDim2.new(0.65, 0, 0, 16)
     lbl.Position = UDim2.new(0, 10, 0, 3)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = currentTheme.SOFT_TEXT
-    lbl.Font = Enum.Font.FredokaOne
-    lbl.TextSize = 11
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local sub = Instance.new("TextLabel", card)
+    sub.Name = "CardSub"
     sub.Size = UDim2.new(0.65, 0, 0, 14)
     sub.Position = UDim2.new(0, 10, 0, 18)
     sub.BackgroundTransparency = 1
     sub.Text = subtext or ""
     sub.TextColor3 = currentTheme.SUB_TEXT
-    sub.Font = Enum.Font.GothamMedium
-    sub.TextSize = 9
+    sub.Font = Enum.Font.GothamBold
+    sub.TextSize = 10
     sub.TextXAlignment = Enum.TextXAlignment.Left
 
     local btn = Instance.new("TextButton", card)
+    btn.Name = "ToggleBtn"
     btn.Size = UDim2.new(0, 36, 0, 18)
     btn.Position = UDim2.new(1, -44, 0, 9)
     btn.BackgroundColor3 = default and currentTheme.ACCENT or currentTheme.TOGGLE_OFF
@@ -547,41 +617,43 @@ local function addToggle(parentPage, text, subtext, default, callback)
         callback(state)
     end
 
-    btn.MouseButton1Click:Connect(function()
-        setToggleState(not state)
-    end)
+    btn.MouseButton1Click:Connect(function() setToggleState(not state) end)
     return setToggleState
 end
 
 local function addSlider(parentPage, text, min, max, default, callback)
     local card = createCard(parentPage, 40)
     local lbl = Instance.new("TextLabel", card)
+    lbl.Name = "CardLabel"
     lbl.Size = UDim2.new(0.65, 0, 0, 15)
     lbl.Position = UDim2.new(0, 10, 0, 3)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = currentTheme.SOFT_TEXT
-    lbl.Font = Enum.Font.FredokaOne
-    lbl.TextSize = 11
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local valLbl = Instance.new("TextLabel", card)
+    valLbl.Name = "ValueLabel"
     valLbl.Size = UDim2.new(0.25, 0, 0, 15)
     valLbl.Position = UDim2.new(0, 10, 0, 15)
     valLbl.BackgroundTransparency = 1
     valLbl.Text = tostring(default)
     valLbl.TextColor3 = currentTheme.ACCENT
-    valLbl.Font = Enum.Font.FredokaOne
-    valLbl.TextSize = 10
+    valLbl.Font = Enum.Font.SourceSansBold
+    valLbl.TextSize = 11
     valLbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local bg = Instance.new("Frame", card)
+    bg.Name = "SliderBG"
     bg.Size = UDim2.new(1, -20, 0, 5)
     bg.Position = UDim2.new(0, 10, 0, 30)
     bg.BackgroundColor3 = currentTheme.SLIDER_BG
     Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame", bg)
+    fill.Name = "SliderFill"
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = currentTheme.ACCENT
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
@@ -610,32 +682,36 @@ end
 local function addFloatSlider(parentPage, text, min, max, default, callback)
     local card = createCard(parentPage, 40)
     local lbl = Instance.new("TextLabel", card)
+    lbl.Name = "CardLabel"
     lbl.Size = UDim2.new(0.65, 0, 0, 15)
     lbl.Position = UDim2.new(0, 10, 0, 3)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = currentTheme.SOFT_TEXT
-    lbl.Font = Enum.Font.FredokaOne
-    lbl.TextSize = 11
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local valLbl = Instance.new("TextLabel", card)
+    valLbl.Name = "ValueLabel"
     valLbl.Size = UDim2.new(0.25, 0, 0, 15)
     valLbl.Position = UDim2.new(0, 10, 0, 15)
     valLbl.BackgroundTransparency = 1
     valLbl.Text = string.format("%.2f", default)
     valLbl.TextColor3 = currentTheme.ACCENT
-    valLbl.Font = Enum.Font.FredokaOne
-    valLbl.TextSize = 10
+    valLbl.Font = Enum.Font.SourceSansBold
+    valLbl.TextSize = 11
     valLbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local bg = Instance.new("Frame", card)
+    bg.Name = "SliderBG"
     bg.Size = UDim2.new(1, -20, 0, 5)
     bg.Position = UDim2.new(0, 10, 0, 30)
     bg.BackgroundColor3 = currentTheme.SLIDER_BG
     Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
 
     local fill = Instance.new("Frame", bg)
+    fill.Name = "SliderFill"
     fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
     fill.BackgroundColor3 = currentTheme.ACCENT
     Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
@@ -664,13 +740,14 @@ end
 local function addKeybindPicker(parentPage, text, currentKey, callback)
     local card = createCard(parentPage, 36)
     local lbl = Instance.new("TextLabel", card)
+    lbl.Name = "CardLabel"
     lbl.Size = UDim2.new(0.65, 0, 1, 0)
     lbl.Position = UDim2.new(0, 10, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = currentTheme.SOFT_TEXT
-    lbl.Font = Enum.Font.FredokaOne
-    lbl.TextSize = 11
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local keyBtn = Instance.new("TextButton", card)
@@ -679,10 +756,10 @@ local function addKeybindPicker(parentPage, text, currentKey, callback)
     keyBtn.BackgroundColor3 = currentTheme.LIGHT_BTN
     keyBtn.Text = currentKey.Name
     keyBtn.TextColor3 = currentTheme.SOFT_TEXT
-    keyBtn.Font = Enum.Font.FredokaOne
-    keyBtn.TextSize = 10
+    keyBtn.Font = Enum.Font.SourceSansBold
+    keyBtn.TextSize = 11
     keyBtn.AutoButtonColor = false
-    Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", keyBtn).CornerRadius = UDim.new(0, 6)
 
     local listening = false
     keyBtn.MouseButton1Click:Connect(function()
@@ -690,7 +767,7 @@ local function addKeybindPicker(parentPage, text, currentKey, callback)
         listening = true
         keyBtn.Text = "..."
         keyBtn.BackgroundColor3 = currentTheme.ACCENT
-        keyBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         local connection
         connection = UIS.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -713,13 +790,14 @@ local function addDropdown(parentPage, text, list, default, callback)
     topFrame.BackgroundTransparency = 1
 
     local lbl = Instance.new("TextLabel", topFrame)
+    lbl.Name = "CardLabel"
     lbl.Size = UDim2.new(0.42, 0, 1, 0)
     lbl.Position = UDim2.new(0, 10, 0, 0)
     lbl.BackgroundTransparency = 1
     lbl.Text = text
     lbl.TextColor3 = currentTheme.SOFT_TEXT
-    lbl.Font = Enum.Font.FredokaOne
-    lbl.TextSize = 11
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
 
     local btn = Instance.new("TextButton", topFrame)
@@ -728,19 +806,19 @@ local function addDropdown(parentPage, text, list, default, callback)
     btn.BackgroundColor3 = currentTheme.LIGHT_BTN
     btn.Text = default
     btn.TextColor3 = currentTheme.SOFT_TEXT
-    btn.Font = Enum.Font.GothamMedium
+    btn.Font = Enum.Font.GothamBold
     btn.TextSize = 10
     btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
 
     local dropScroll = Instance.new("ScrollingFrame", card)
-    dropScroll.Size = UDim2.new(1, -20, 0, 110)
+    dropScroll.Size = UDim2.new(1, -20, 0, 100)
     dropScroll.Position = UDim2.new(0, 10, 0, 38)
     dropScroll.BackgroundColor3 = currentTheme.SLIDER_BG
     dropScroll.Visible = false
     dropScroll.BorderSizePixel = 0
     dropScroll.ScrollBarThickness = 3
-    Instance.new("UICorner", dropScroll).CornerRadius = UDim.new(0, 5)
+    Instance.new("UICorner", dropScroll).CornerRadius = UDim.new(0, 6)
 
     local dList = Instance.new("UIListLayout", dropScroll)
     dList.SortOrder = Enum.SortOrder.LayoutOrder
@@ -754,7 +832,7 @@ local function addDropdown(parentPage, text, list, default, callback)
         item.BackgroundTransparency = 1
         item.Text = v
         item.TextColor3 = currentTheme.SOFT_TEXT
-        item.Font = Enum.Font.GothamMedium
+        item.Font = Enum.Font.GothamBold
         item.TextSize = 10
         item.MouseButton1Click:Connect(function()
             btn.Text = v
@@ -767,107 +845,269 @@ local function addDropdown(parentPage, text, list, default, callback)
     btn.MouseButton1Click:Connect(function()
         local opened = not dropScroll.Visible
         dropScroll.Visible = opened
-        card.Size = UDim2.new(1, -4, 0, opened and 150 or 36)
+        card.Size = UDim2.new(1, -4, 0, opened and 140 or 36)
     end)
 end
 
-local function addColorPicker(parentPage, titleText, currentColor, callback)
-    local card = createCard(parentPage, 96)
-    local title = Instance.new("TextLabel", card)
-    title.Size = UDim2.new(1, -16, 0, 18)
-    title.Position = UDim2.new(0, 10, 0, 3)
-    title.BackgroundTransparency = 1
-    title.Text = "<3 " .. titleText .. " <3"
-    title.TextColor3 = currentTheme.SOFT_TEXT
-    title.Font = Enum.Font.FredokaOne
-    title.TextSize = 11
-    title.TextXAlignment = Enum.TextXAlignment.Left
+local function addColorSelector(parentPage, titleText, currentColor, callback)
+    local card = createCard(parentPage, 36)
+    local topFrame = Instance.new("Frame", card)
+    topFrame.Size = UDim2.new(1, 0, 0, 36)
+    topFrame.BackgroundTransparency = 1
 
-    local colors = {
-        Color3.fromRGB(255, 105, 180), Color3.fromRGB(255, 60, 60), Color3.fromRGB(60, 140, 255),
-        Color3.fromRGB(60, 220, 100), Color3.fromRGB(255, 220, 50), Color3.fromRGB(160, 80, 255),
-        Color3.fromRGB(255, 140, 40), Color3.fromRGB(255, 255, 255), Color3.fromRGB(20, 20, 20),
-        Color3.fromRGB(255, 175, 205), Color3.fromRGB(255, 125, 155), Color3.fromRGB(90, 220, 235),
-        Color3.fromRGB(110, 235, 195), Color3.fromRGB(175, 235, 90), Color3.fromRGB(255, 155, 70),
-        Color3.fromRGB(155, 100, 240), Color3.fromRGB(180, 180, 190), Color3.fromRGB(40, 40, 50)
+    local lbl = Instance.new("TextLabel", topFrame)
+    lbl.Name = "CardLabel"
+    lbl.Size = UDim2.new(0.42, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 10, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = titleText
+    lbl.TextColor3 = currentTheme.SOFT_TEXT
+    lbl.Font = Enum.Font.SourceSansBold
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local colorMap = {
+        ["hot pink"] = Color3.fromRGB(255, 20, 147),
+        ["pink"] = Color3.fromRGB(255, 105, 180),
+        ["light orange"] = Color3.fromRGB(255, 160, 122),
+        ["cyan"] = Color3.fromRGB(0, 255, 255),
+        ["green"] = Color3.fromRGB(50, 205, 50),
+        ["purple"] = Color3.fromRGB(153, 50, 204),
+        ["blue"] = Color3.fromRGB(30, 144, 255),
+        ["electric blue"] = Color3.fromRGB(0, 191, 255),
+        ["light red"] = Color3.fromRGB(255, 99, 71),
+        ["violet"] = Color3.fromRGB(238, 130, 238)
     }
 
-    local swatches = {}
-    for i, color in ipairs(colors) do
-        local row = math.floor((i - 1) / 9)
-        local col = (i - 1) % 9
-        local btn = Instance.new("TextButton", card)
-        btn.Size = UDim2.new(0, 20, 0, 20)
-        btn.Position = UDim2.new(0, 10 + (col * 31), 0, 26 + (row * 28))
-        btn.BackgroundColor3 = color
-        btn.Text = ""
-        btn.AutoButtonColor = false
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-        local stroke = Instance.new("UIStroke", btn)
-        stroke.Color = currentTheme.STROKE
-        stroke.Thickness = 1
-        swatches[i] = stroke
+    local currentName = "hot pink"
+    for name, col in pairs(colorMap) do
+        if math.abs(col.R - currentColor.R) < 0.05 and math.abs(col.G - currentColor.G) < 0.05 and math.abs(col.B - currentColor.B) < 0.05 then
+            currentName = name
+            break
+        end
+    end
 
-        btn.MouseButton1Click:Connect(function()
-            callback(color)
-            for j, s in ipairs(swatches) do
-                s.Color = (j == i) and Color3.fromRGB(255, 255, 255) or currentTheme.STROKE
-                s.Thickness = (j == i) and 2 or 1
-            end
+    local btn = Instance.new("TextButton", topFrame)
+    btn.Size = UDim2.new(0.52, 0, 0, 22)
+    btn.Position = UDim2.new(0.44, 0, 0.5, -11)
+    btn.BackgroundColor3 = currentTheme.LIGHT_BTN
+    btn.Text = currentName
+    btn.TextColor3 = currentTheme.SOFT_TEXT
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 10
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+    local dropScroll = Instance.new("ScrollingFrame", card)
+    dropScroll.Size = UDim2.new(1, -20, 0, 140)
+    dropScroll.Position = UDim2.new(0, 10, 0, 38)
+    dropScroll.BackgroundColor3 = currentTheme.SLIDER_BG
+    dropScroll.Visible = false
+    dropScroll.BorderSizePixel = 0
+    dropScroll.ScrollBarThickness = 3
+    Instance.new("UICorner", dropScroll).CornerRadius = UDim.new(0, 6)
+
+    local dList = Instance.new("UIListLayout", dropScroll)
+    dList.SortOrder = Enum.SortOrder.LayoutOrder
+    dList:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        dropScroll.CanvasSize = UDim2.new(0, 0, 0, dList.AbsoluteContentSize.Y)
+    end)
+
+    for name, col in pairs(colorMap) do
+        local item = Instance.new("TextButton", dropScroll)
+        item.Size = UDim2.new(1, 0, 0, 24)
+        item.BackgroundTransparency = 1
+        item.Text = name
+        item.TextColor3 = currentTheme.SOFT_TEXT
+        item.Font = Enum.Font.GothamBold
+        item.TextSize = 10
+        item.MouseButton1Click:Connect(function()
+            btn.Text = name
+            dropScroll.Visible = false
+            card.Size = UDim2.new(1, -4, 0, 36)
+            callback(col)
         end)
+    end
+
+    btn.MouseButton1Click:Connect(function()
+        local opened = not dropScroll.Visible
+        dropScroll.Visible = opened
+        card.Size = UDim2.new(1, -4, 0, opened and 180 or 36)
+    end)
+end
+
+-- Refresh UI colors dynamically when a new theme preset is selected
+local function updateThemeColors(newThemeData)
+    for k, v in pairs(newThemeData) do
+        currentTheme[k] = v
+    end
+
+    Main.BackgroundColor3 = currentTheme.BG
+    MainStroke.Color = currentTheme.ACCENT
+    Content.BackgroundColor3 = currentTheme.CARD_BG
+
+    Title.TextColor3 = currentTheme.SOFT_TEXT
+    UserSubTitle.TextColor3 = currentTheme.SUB_TEXT
+
+    for _, page in pairs(pages) do
+        page.ScrollBarImageColor3 = currentTheme.ACCENT
+        local hFrame = page:FindFirstChildOfClass("Frame")
+        if hFrame then
+            local pTitle = hFrame:FindFirstChild("PageTitle")
+            local pDesc = hFrame:FindFirstChild("PageDesc")
+            if pTitle then pTitle.TextColor3 = currentTheme.SOFT_TEXT end
+            if pDesc then pDesc.TextColor3 = currentTheme.SUB_TEXT end
+        end
+
+        for _, card in ipairs(page:GetChildren()) do
+            if card:IsA("Frame") and card.Name ~= "Header" then
+                card.BackgroundColor3 = currentTheme.CARD
+                local stroke = card:FindFirstChild("CardStroke")
+                if stroke then stroke.Color = currentTheme.STROKE end
+
+                local lbl = card:FindFirstChild("CardLabel")
+                if lbl then lbl.TextColor3 = currentTheme.SOFT_TEXT end
+
+                local sub = card:FindFirstChild("CardSub")
+                if sub then sub.TextColor3 = currentTheme.SUB_TEXT end
+
+                local valLbl = card:FindFirstChild("ValueLabel")
+                if valLbl then valLbl.TextColor3 = currentTheme.ACCENT end
+
+                local sliderBG = card:FindFirstChild("SliderBG")
+                if sliderBG then
+                    sliderBG.BackgroundColor3 = currentTheme.SLIDER_BG
+                    local fill = sliderBG:FindFirstChild("SliderFill")
+                    if fill then fill.BackgroundColor3 = currentTheme.ACCENT end
+                end
+
+                local toggleBtn = card:FindFirstChild("ToggleBtn")
+                if toggleBtn then
+                    toggleBtn.BackgroundColor3 = currentTheme.LIGHT_BTN
+                end
+            end
+        end
     end
 end
 
-addToggle(silentAimPage, "Silent Aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
-addSlider(silentAimPage, "FOV Radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
-addToggle(silentAimPage, "Show FOV", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
-addColorPicker(silentAimPage, "FOV Color Palette", cfg.silentAimColor, function(c) cfg.silentAimColor = c end)
-addDropdown(silentAimPage, "HitPart", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
-addToggle(silentAimPage, "Target Closest Part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
-addToggle(silentAimPage, "Revolver Bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
-addToggle(silentAimPage, "Wall Check", "only aim in open space", cfg.silentAimWallCheck, function(v) cfg.silentAimWallCheck = v end)
+-- Theme Presets Configuration
+local themesList = {"latte cream", "cute pink", "matcha green", "lavender dream", "dark gothic"}
+local themePresets = {
+    ["latte cream"] = {
+        ACCENT = Color3.fromRGB(185, 164, 147),
+        BG = Color3.fromRGB(245, 242, 235),
+        CARD_BG = Color3.fromRGB(250, 248, 243),
+        CARD = Color3.fromRGB(238, 234, 226),
+        SOFT_TEXT = Color3.fromRGB(75, 65, 55),
+        SUB_TEXT = Color3.fromRGB(135, 118, 104),
+        LIGHT_BTN = Color3.fromRGB(230, 224, 215),
+        TOGGLE_OFF = Color3.fromRGB(215, 208, 198),
+        STROKE = Color3.fromRGB(205, 194, 182),
+        SLIDER_BG = Color3.fromRGB(230, 224, 215)
+    },
+    ["cute pink"] = {
+        ACCENT = Color3.fromRGB(255, 105, 180),
+        BG = Color3.fromRGB(255, 240, 245),
+        CARD_BG = Color3.fromRGB(255, 248, 250),
+        CARD = Color3.fromRGB(255, 228, 238),
+        SOFT_TEXT = Color3.fromRGB(120, 40, 80),
+        SUB_TEXT = Color3.fromRGB(180, 100, 130),
+        LIGHT_BTN = Color3.fromRGB(255, 218, 228),
+        TOGGLE_OFF = Color3.fromRGB(230, 190, 205),
+        STROKE = Color3.fromRGB(255, 182, 193),
+        SLIDER_BG = Color3.fromRGB(255, 218, 228)
+    },
+    ["matcha green"] = {
+        ACCENT = Color3.fromRGB(120, 165, 120),
+        BG = Color3.fromRGB(240, 245, 240),
+        CARD_BG = Color3.fromRGB(246, 250, 246),
+        CARD = Color3.fromRGB(228, 238, 228),
+        SOFT_TEXT = Color3.fromRGB(50, 75, 50),
+        SUB_TEXT = Color3.fromRGB(95, 125, 95),
+        LIGHT_BTN = Color3.fromRGB(215, 230, 215),
+        TOGGLE_OFF = Color3.fromRGB(195, 210, 195),
+        STROKE = Color3.fromRGB(180, 205, 180),
+        SLIDER_BG = Color3.fromRGB(215, 230, 215)
+    },
+    ["lavender dream"] = {
+        ACCENT = Color3.fromRGB(165, 140, 200),
+        BG = Color3.fromRGB(245, 242, 250),
+        CARD_BG = Color3.fromRGB(250, 248, 253),
+        CARD = Color3.fromRGB(235, 228, 245),
+        SOFT_TEXT = Color3.fromRGB(75, 55, 100),
+        SUB_TEXT = Color3.fromRGB(125, 105, 150),
+        LIGHT_BTN = Color3.fromRGB(222, 212, 238),
+        TOGGLE_OFF = Color3.fromRGB(200, 190, 220),
+        STROKE = Color3.fromRGB(190, 175, 215),
+        SLIDER_BG = Color3.fromRGB(222, 212, 238)
+    },
+    ["dark gothic"] = {
+        ACCENT = Color3.fromRGB(200, 75, 120),
+        BG = Color3.fromRGB(25, 22, 28),
+        CARD_BG = Color3.fromRGB(35, 30, 38),
+        CARD = Color3.fromRGB(45, 38, 48),
+        SOFT_TEXT = Color3.fromRGB(240, 230, 245),
+        SUB_TEXT = Color3.fromRGB(160, 145, 165),
+        LIGHT_BTN = Color3.fromRGB(55, 46, 60),
+        TOGGLE_OFF = Color3.fromRGB(70, 58, 75),
+        STROKE = Color3.fromRGB(75, 60, 80),
+        SLIDER_BG = Color3.fromRGB(55, 46, 60)
+    }
+}
 
-addToggle(camlockPage, "Camlock", "sticky camera lock", cfg.camlockEnabled, function(v)
+addDropdown(themePage, "color theme", themesList, "latte cream", function(selectedName)
+    if themePresets[selectedName] then
+        updateThemeColors(themePresets[selectedName])
+    end
+end)
+
+addToggle(silentAimPage, "silent aim", "improves shot accuracy", cfg.silentAim, function(v) cfg.silentAim = v end)
+addSlider(silentAimPage, "fov radius", 10, 500, cfg.silentAimFOV, function(v) cfg.silentAimFOV = v end)
+addToggle(silentAimPage, "show fov", "circle on screen", cfg.silentAimFOVShow, function(v) cfg.silentAimFOVShow = v end)
+addColorSelector(silentAimPage, "fov color", cfg.silentAimColor, function(c) cfg.silentAimColor = c end)
+addDropdown(silentAimPage, "hit part", bodyPartsList, cfg.silentAimPart, function(v) cfg.silentAimPart = v end)
+addToggle(silentAimPage, "target closest part", "auto choose body part", cfg.silentAimClosestPart, function(v) cfg.silentAimClosestPart = v end)
+addToggle(silentAimPage, "revolver bypass", "skip silent on revolver", cfg.bypassRevolver, function(v) cfg.bypassRevolver = v end)
+addToggle(silentAimPage, "wall check", "only aim in open space", cfg.silentAimWallCheck, function(v) cfg.silentAimWallCheck = v end)
+
+addToggle(camlockPage, "camlock", "sticky camera lock", cfg.camlockEnabled, function(v)
     cfg.camlockEnabled = v
     if not v then cfg.camlockActive = false end
 end)
-addFloatSlider(camlockPage, "Smoothness", 0.01, 1, cfg.camlockSmoothness, function(v) cfg.camlockSmoothness = v end)
-addKeybindPicker(camlockPage, "Keybind", cfg.camlockKey, function(k) cfg.camlockKey = k end)
-addDropdown(camlockPage, "Target Part", bodyPartsList, cfg.camlockPart, function(v) cfg.camlockPart = v end)
+addFloatSlider(camlockPage, "smoothness", 0.01, 1, cfg.camlockSmoothness, function(v) cfg.camlockSmoothness = v end)
+addKeybindPicker(camlockPage, "keybind", cfg.camlockKey, function(k) cfg.camlockKey = k end)
+addDropdown(camlockPage, "target part", bodyPartsList, cfg.camlockPart, function(v) cfg.camlockPart = v end)
 
-addToggle(hitboxPage, "Enable Hitbox", "enlarge enemy hitboxes", cfg.hitboxEnabled, function(v) cfg.hitboxEnabled = v end)
-addSlider(hitboxPage, "Hitbox Size", 2, 20, cfg.hitboxSize, function(v) cfg.hitboxSize = v end)
-addFloatSlider(hitboxPage, "Transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
-addColorPicker(hitboxPage, "Hitbox Color Palette", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
+addToggle(hitboxPage, "enable hitbox", "enlarge enemy hitboxes", cfg.hitboxEnabled, function(v) cfg.hitboxEnabled = v end)
+addSlider(hitboxPage, "hitbox size", 2, 20, cfg.hitboxSize, function(v) cfg.hitboxSize = v end)
+addFloatSlider(hitboxPage, "transparency", 0, 1, cfg.hitboxTransparency, function(v) cfg.hitboxTransparency = v end)
+addColorSelector(hitboxPage, "hitbox color", cfg.hitboxColor, function(c) cfg.hitboxColor = c end)
 
--- Movement Toggles
-addToggle(visualsPage, "Speed Hack", "faster walk speed", cfg.speedEnabled, function(v)
+addToggle(visualsPage, "speed hack", "faster walk speed", cfg.speedEnabled, function(v)
     cfg.speedEnabled = v
-    cfg.speedKeyActive = true
+    if not v then cfg.speedActive = false end
 end)
-addSlider(visualsPage, "Speed Value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
-addKeybindPicker(visualsPage, "Speed Keybind", cfg.speedKey, function(k) cfg.speedKey = k end)
+addSlider(visualsPage, "speed value", 16, 500, cfg.speedValue, function(v) cfg.speedValue = v end)
+addKeybindPicker(visualsPage, "speed keybind", cfg.speedKey, function(k) cfg.speedKey = k end)
 
-addToggle(visualsPage, "Jump Power", "higher jump height", cfg.jumpEnabled, function(v)
+addToggle(visualsPage, "jump power", "higher jump height", cfg.jumpEnabled, function(v)
     cfg.jumpEnabled = v
-    cfg.jumpKeyActive = true
+    if not v then cfg.jumpActive = false end
 end)
-addSlider(visualsPage, "Jump Value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
-addKeybindPicker(visualsPage, "Jump Keybind", cfg.jumpKey, function(k) cfg.jumpKey = k end)
+addSlider(visualsPage, "jump value", 50, 500, cfg.jumpValue, function(v) cfg.jumpValue = v end)
+addKeybindPicker(visualsPage, "jump keybind", cfg.jumpKey, function(k) cfg.jumpKey = k end)
 
-addToggle(fogPage, "Custom Fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
-addSlider(fogPage, "Fog Start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
-addSlider(fogPage, "Fog End", 50, 1000, cfg.fogEnd, function(v) cfg.fogEnd = v end)
-addColorPicker(fogPage, "Fog Color Palette", cfg.fogColor, function(c) cfg.fogColor = c end)
+addToggle(fogPage, "custom fog", "enable fog modifications", cfg.fogEnabled, function(v) cfg.fogEnabled = v end)
+addSlider(fogPage, "fog start", 0, 500, cfg.fogStart, function(v) cfg.fogStart = v end)
+addSlider(fogPage, "fog end", 50, 1000, cfg.fogEnd, function(v) cfg.fogEnd = v end)
+addColorSelector(fogPage, "fog color", cfg.fogColor, function(c) cfg.fogColor = c end)
 
 local whitelistListHolder = createPage("whitelist", "whitelist", "whitelisted friends & players")
 local whitelistToggles = {}
 
 local function rebuildWhitelistUI()
     for _, tObj in ipairs(whitelistToggles) do
-        if tObj.Card and tObj.Card.Parent then
-            tObj.Card:Destroy()
-        end
+        if tObj.Card and tObj.Card.Parent then tObj.Card:Destroy() end
     end
     whitelistToggles = {}
 
@@ -884,18 +1124,10 @@ end
 
 rebuildWhitelistUI()
 
-Players.PlayerAdded:Connect(function()
-    task.wait(0.5)
-    rebuildWhitelistUI()
-end)
-
-Players.PlayerRemoving:Connect(function()
-    task.wait(0.2)
-    rebuildWhitelistUI()
-end)
+Players.PlayerAdded:Connect(function() task.wait(0.5) rebuildWhitelistUI() end)
+Players.PlayerRemoving:Connect(function() task.wait(0.2) rebuildWhitelistUI() end)
 
 tabButtons["silentAim"].Button.BackgroundTransparency = 0
-tabButtons["silentAim"].Bar.Visible = true
 tabButtons["silentAim"].Label.TextColor3 = currentTheme.SOFT_TEXT
 pages["silentAim"].Visible = true
 
@@ -904,6 +1136,10 @@ UIS.InputBegan:Connect(function(i, gpe)
     if cfg.camlockEnabled and i.KeyCode == cfg.camlockKey then
         cfg.camlockActive = not cfg.camlockActive
         if not cfg.camlockActive then cfg.camlockTarget = nil end
+    elseif cfg.speedEnabled and i.KeyCode == cfg.speedKey then
+        cfg.speedActive = not cfg.speedActive
+    elseif cfg.jumpEnabled and i.KeyCode == cfg.jumpKey then
+        cfg.jumpActive = not cfg.jumpActive
     elseif i.KeyCode == cfg.uiToggleKey then
         ScreenGui.Enabled = not ScreenGui.Enabled
     end
