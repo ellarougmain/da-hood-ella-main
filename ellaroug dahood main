@@ -1,7 +1,13 @@
 --==================================================
 -- ELLA MAIN DA HOOD - CUTE PROFILE & UI CUSTOMIZER
 --==================================================
-local userInputKey = "love_ella"
+-- Updated with multiple valid access keys ♡
+local validKeys = {
+    ["love_ella"] = true,
+    ["ellalove"] = true,
+    ["lovella"] = true,
+    ["ellalovesyou"] = true
+}
 
 -- Key System Prompt UI
 local CoreGui = game:GetService("CoreGui")
@@ -55,7 +61,7 @@ Instance.new("UICorner", SubmitBtn).CornerRadius = UDim.new(0, 8)
 
 local keyUnlocked = false
 SubmitBtn.MouseButton1Click:Connect(function()
-    if KeyBox.Text == userInputKey then
+    if validKeys[KeyBox.Text] then
         keyUnlocked = true
         KeyGui:Destroy()
     else
@@ -91,9 +97,6 @@ game:GetService("StarterGui"):SetCore("SendNotification", {
 local originalFogStart = Lighting.FogStart
 local originalFogEnd = Lighting.FogEnd
 local originalFogColor = Lighting.FogColor
-
-local defaultWalkSpeed = 16
-local defaultJumpPower = 50
 
 local cfg = {
     silentAim = true,
@@ -291,8 +294,6 @@ RunService.RenderStepped:Connect(function()
     if hum then
         if cfg.speedEnabled and cfg.speedActive then
             hum.WalkSpeed = cfg.speedValue
-        else
-            hum.WalkSpeed = defaultWalkSpeed
         end
 
         if cfg.jumpEnabled and cfg.jumpActive then
@@ -300,8 +301,6 @@ RunService.RenderStepped:Connect(function()
             if hum.UseJumpPower == false then
                 pcall(function() hum.JumpHeight = cfg.jumpValue / 7.2 end)
             end
-        else
-            hum.JumpPower = defaultJumpPower
         end
     end
 
